@@ -1,0 +1,6 @@
+*.secret
+*.pyc
+.ipynb_checkpoints
+venv
+mastodon_digest
+dev_*.ipynb
