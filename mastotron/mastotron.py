@@ -205,7 +205,7 @@ class Post(AttribAccessDict):
                 </div>
             '''
             
-        return o
+        return '\n'.join([ln.lstrip() for ln in o.split('\n')])
 
     @property
     def author(self):

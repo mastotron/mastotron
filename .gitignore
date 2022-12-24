@@ -5,3 +5,4 @@ venv
 mastodon_digest
 dev_*.ipynb
 .DS_Store
+test_*.ipynb
