@@ -153,11 +153,11 @@ post.scores()
 
 
 
-{'Simple': 1.7320508075688774,
-'ExtendedSimple': 1.8171205928321397,
-'SimpleWeighted': 0.11274690420042434,
-'ExtendedSimpleWeighted': 0.11828447555082267,
-'All': 0.4526308886948211}
+    {'Simple': 1.7320508075688774,
+    'ExtendedSimple': 1.8171205928321397,
+    'SimpleWeighted': 0.11274690420042434,
+    'ExtendedSimpleWeighted': 0.11828447555082267,
+    'All': 0.4526308886948211}
 
 
 
