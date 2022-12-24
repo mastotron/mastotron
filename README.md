@@ -7,6 +7,52 @@ from mastotron import Mastotron, Post
 # instantiate; will guide through auth
 tron = Mastotron()
 
+# get latest post
+post = tron.latest_post()
+post
+```
+
+
+
+
+
+<div class="post reblog" style="border:1px solid blue; padding: 0 1em;">
+<p>
+<a href="https://mastodonapp.uk/@samfordsaunders">samfordsaunders@mastodonapp.uk</a> (491 👥) reposted at 12/24/2022 at 10:21:21:
+</p>
+
+
+<div class="post origpost" style="border:1px solid orange;padding:0 1em;">
+<p>
+<a href="https://mastodonapp.uk/@rossbright">rossbright@mastodonapp.uk</a> (12 👥) <a href="https://mastodonapp.uk/@rossbright/109564200724150430">wrote</a> on 12/23/2022 at 17:37:07:
+</p>
+
+<p>Staggering charts in the FT by John Burn-Murdoch show that after 12 years of Tory rule we are poorer, sicker and will die sooner than our peers. Utterly disgraceful.</p>
+
+<center><a href="https://cdn.masto.host/zirkus/cache/media_attachments/files/109/564/295/714/414/861/small/6bfb1d734f73034d.png"><img src="https://cdn.masto.host/zirkus/cache/media_attachments/files/109/564/295/714/414/861/small/6bfb1d734f73034d.png" /></a>    <a href="https://cdn.masto.host/zirkus/cache/media_attachments/files/109/564/295/857/084/245/small/cbd7ae015562d242.png"><img src="https://cdn.masto.host/zirkus/cache/media_attachments/files/109/564/295/857/084/245/small/cbd7ae015562d242.png" /></a>    <a href="https://cdn.masto.host/zirkus/cache/media_attachments/files/109/564/295/965/636/625/small/ac5e875262d38098.png"><img src="https://cdn.masto.host/zirkus/cache/media_attachments/files/109/564/295/965/636/625/small/ac5e875262d38098.png" /></a></center>
+
+<p>
+7 🗣
+&nbsp; | &nbsp; 
+55 🔁
+&nbsp; | &nbsp;
+1 💙
+&nbsp; | &nbsp;
+Post ID: 109564200724615916
+</p>
+
+
+</div>
+
+<br/>
+
+</div>
+
+
+
+
+
+```python
 # Get a post by id on your server
 post = Post(id=109566222383974657)
 post
@@ -34,6 +80,8 @@ post
 &nbsp; | &nbsp;
 Post ID: 109566222383974657
 </p>
+
+
 </div>
 
 
@@ -98,7 +146,7 @@ post
 
 <div class="post origpost" style="border:1px solid orange;padding:0 1em;">
 <p>
-<a href="https://zirk.us/@heuser">heuser</a> (235 👥) <a href="https://zirk.us/@heuser/109564529870067074">wrote</a> on 12/23/2022 at 19:00:50:
+    <a href="https://zirk.us/@heuser">heuser</a> (235 👥) <a href="https://zirk.us/@heuser/109564529870067074">wrote</a> on 12/23/2022 at 19:00:50:
 </p>
 
 <p>Unexpected challenge: there are very few likes on tweets in my mastodon timeline. (step that up pls everyone thx.) So it&#39;s hard to sort the tweets using that metric.</p>
@@ -106,19 +154,19 @@ post
 <center></center>
 
 <p>
-1 🗣
-&nbsp; | &nbsp; 
-0 🔁
-&nbsp; | &nbsp;
-2 💙
-&nbsp; | &nbsp;
-Post ID: 109564529870067074
+    1 🗣
+    &nbsp; | &nbsp; 
+    0 🔁
+    &nbsp; | &nbsp;
+    2 💙
+    &nbsp; | &nbsp;
+    Post ID: 109564529870067074
 </p>
 
 <p><b><i>... in reply to:</i></b></p> 
 <div class="post origpost" style="border:1px solid orange;padding:0 1em;">
 <p>
-<a href="https://zirk.us/@heuser">heuser</a> (235 👥) <a href="https://zirk.us/@heuser/109564459673004810">wrote</a> on 12/23/2022 at 18:42:58:
+    <a href="https://zirk.us/@heuser">heuser</a> (235 👥) <a href="https://zirk.us/@heuser/109564459673004810">wrote</a> on 12/23/2022 at 18:42:58:
 </p>
 
 <p>Experimenting with making an &quot;algorithm&quot; to sort a user&#39;s feed using python and mastodon.py. This tweet was sent from a jupyter notebook.</p>
@@ -126,13 +174,13 @@ Post ID: 109564529870067074
 <center></center>
 
 <p>
-1 🗣
-&nbsp; | &nbsp; 
-1 🔁
-&nbsp; | &nbsp;
-3 💙
-&nbsp; | &nbsp;
-Post ID: 109564459673004810
+    1 🗣
+    &nbsp; | &nbsp; 
+    1 🔁
+    &nbsp; | &nbsp;
+    3 💙
+    &nbsp; | &nbsp;
+    Post ID: 109564459673004810
 </p>
 
 
