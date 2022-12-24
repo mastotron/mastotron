@@ -1,5 +1,8 @@
 # mastotron
 
+Experiments in algorithmifying mastodon
+
+
 ```python
 # load the class
 from mastotron import Mastotron, Post
@@ -18,27 +21,27 @@ post
 
 <div class="post reblog" style="border:1px solid blue; padding: 0 1em;">
 <p>
-<a href="https://mastodonapp.uk/@samfordsaunders">samfordsaunders@mastodonapp.uk</a> (491 👥) reposted at 12/24/2022 at 10:21:21:
+<a href="https://ausglam.space/@ingridbmason">ingridbmason@ausglam.space</a> (382 👥) reposted at 12/24/2022 at 10:23:22:
 </p>
 
 
 <div class="post origpost" style="border:1px solid orange;padding:0 1em;">
 <p>
-<a href="https://mastodonapp.uk/@rossbright">rossbright@mastodonapp.uk</a> (12 👥) <a href="https://mastodonapp.uk/@rossbright/109564200724150430">wrote</a> on 12/23/2022 at 17:37:07:
+<a href="https://mastodon.social/@acb">acb@mastodon.social</a> (379 👥) <a href="https://mastodon.social/@acb/109567809376185861">wrote</a> on 12/24/2022 at 08:54:51:
 </p>
 
-<p>Staggering charts in the FT by John Burn-Murdoch show that after 12 years of Tory rule we are poorer, sicker and will die sooner than our peers. Utterly disgraceful.</p>
+<p>RT @luismbat@birbsite</p><p>Who would have thought that adding a Sierpinski Triangle Fractal as musical notes would actually sound good!😅</p>
 
-<center><a href="https://cdn.masto.host/zirkus/cache/media_attachments/files/109/564/295/714/414/861/small/6bfb1d734f73034d.png"><img src="https://cdn.masto.host/zirkus/cache/media_attachments/files/109/564/295/714/414/861/small/6bfb1d734f73034d.png" /></a>    <a href="https://cdn.masto.host/zirkus/cache/media_attachments/files/109/564/295/857/084/245/small/cbd7ae015562d242.png"><img src="https://cdn.masto.host/zirkus/cache/media_attachments/files/109/564/295/857/084/245/small/cbd7ae015562d242.png" /></a>    <a href="https://cdn.masto.host/zirkus/cache/media_attachments/files/109/564/295/965/636/625/small/ac5e875262d38098.png"><img src="https://cdn.masto.host/zirkus/cache/media_attachments/files/109/564/295/965/636/625/small/ac5e875262d38098.png" /></a></center>
+<center><a href="https://cdn.masto.host/zirkus/cache/media_attachments/files/109/568/001/032/675/283/small/0d3117c3854cbcce.png"><img src="https://cdn.masto.host/zirkus/cache/media_attachments/files/109/568/001/032/675/283/small/0d3117c3854cbcce.png" /></a></center>
 
 <p>
-7 🗣
+3 🗣
 &nbsp; | &nbsp; 
-55 🔁
+25 🔁
 &nbsp; | &nbsp;
-1 💙
+0 💙
 &nbsp; | &nbsp;
-Post ID: 109564200724615916
+Post ID: 109567809382202427
 </p>
 
 
@@ -72,9 +75,9 @@ post
 <center><a href="https://cdn.masto.host/zirkus/cache/media_attachments/files/109/566/221/923/419/468/small/f0a9cc7c3910417e.png"><img src="https://cdn.masto.host/zirkus/cache/media_attachments/files/109/566/221/923/419/468/small/f0a9cc7c3910417e.png" /></a></center>
 
 <p>
-10 🗣
+11 🗣
 &nbsp; | &nbsp; 
-71 🔁
+77 🔁
 &nbsp; | &nbsp;
 4 💙
 &nbsp; | &nbsp;
@@ -89,7 +92,7 @@ Post ID: 109566222383974657
 
 
 ```python
-# These will show reposts
+# These will show reposts/boosts:
 post = Post(id=109565672404848243)
 post
 ```
@@ -135,6 +138,19 @@ Post ID: 109563512620764058
 
 
 ```python
+# the post and boosted post
+post, post.in_boost_of
+```
+
+
+
+
+    (Post(id=109565672404848243), Post(id=109563512620764058))
+
+
+
+
+```python
 # And replies
 post = Post(id=109564529870067074)
 post
@@ -146,7 +162,7 @@ post
 
 <div class="post origpost" style="border:1px solid orange;padding:0 1em;">
 <p>
-    <a href="https://zirk.us/@heuser">heuser</a> (235 👥) <a href="https://zirk.us/@heuser/109564529870067074">wrote</a> on 12/23/2022 at 19:00:50:
+<a href="https://zirk.us/@heuser">heuser</a> (235 👥) <a href="https://zirk.us/@heuser/109564529870067074">wrote</a> on 12/23/2022 at 19:00:50:
 </p>
 
 <p>Unexpected challenge: there are very few likes on tweets in my mastodon timeline. (step that up pls everyone thx.) So it&#39;s hard to sort the tweets using that metric.</p>
@@ -154,19 +170,19 @@ post
 <center></center>
 
 <p>
-    1 🗣
-    &nbsp; | &nbsp; 
-    0 🔁
-    &nbsp; | &nbsp;
-    2 💙
-    &nbsp; | &nbsp;
-    Post ID: 109564529870067074
+1 🗣
+&nbsp; | &nbsp; 
+0 🔁
+&nbsp; | &nbsp;
+2 💙
+&nbsp; | &nbsp;
+Post ID: 109564529870067074
 </p>
 
 <p><b><i>... in reply to:</i></b></p> 
 <div class="post origpost" style="border:1px solid orange;padding:0 1em;">
 <p>
-    <a href="https://zirk.us/@heuser">heuser</a> (235 👥) <a href="https://zirk.us/@heuser/109564459673004810">wrote</a> on 12/23/2022 at 18:42:58:
+<a href="https://zirk.us/@heuser">heuser</a> (235 👥) <a href="https://zirk.us/@heuser/109564459673004810">wrote</a> on 12/23/2022 at 18:42:58:
 </p>
 
 <p>Experimenting with making an &quot;algorithm&quot; to sort a user&#39;s feed using python and mastodon.py. This tweet was sent from a jupyter notebook.</p>
@@ -174,13 +190,13 @@ post
 <center></center>
 
 <p>
-    1 🗣
-    &nbsp; | &nbsp; 
-    1 🔁
-    &nbsp; | &nbsp;
-    3 💙
-    &nbsp; | &nbsp;
-    Post ID: 109564459673004810
+1 🗣
+&nbsp; | &nbsp; 
+1 🔁
+&nbsp; | &nbsp;
+3 💙
+&nbsp; | &nbsp;
+Post ID: 109564459673004810
 </p>
 
 
@@ -193,6 +209,34 @@ post
 
 
 ```python
+# the replied-to post
+post, post.in_reply_to
+```
+
+
+
+
+    (Post(id=109564529870067074), Post(id=109564459673004810))
+
+
+
+
+```python
+# these can be chained
+Post(id=109564658606466762).in_reply_to.in_reply_to.in_reply_to.id == post.id
+```
+
+
+
+
+    True
+
+
+
+## Scoring posts
+
+
+```python
 # Get scores for a post 
 # (adapted from https://github.com/hodgesmr/mastodon_digest)
 post.scores()
@@ -202,10 +246,10 @@ post.scores()
 
 
     {'Simple': 1.7320508075688774,
-    'ExtendedSimple': 1.8171205928321397,
-    'SimpleWeighted': 0.11274690420042434,
-    'ExtendedSimpleWeighted': 0.11828447555082267,
-    'All': 0.4526308886948211}
+     'ExtendedSimple': 1.8171205928321397,
+     'SimpleWeighted': 0.11274690420042434,
+     'ExtendedSimpleWeighted': 0.11828447555082267,
+     'All': 0.4526308886948211}
 
 
 
@@ -213,8 +257,8 @@ post.scores()
 ```python
 # Get top posts by score
 top_posts = sorted(
-tron.latest_posts(max_posts=100),
-key=lambda post: -post.score()
+    tron.latest_posts(max_posts=100),
+    key=lambda post: -post.score()
 )
 
 # top post by engagement
