@@ -16,63 +16,96 @@ def unhtml(x):
 
 
 path_data = os.path.expanduser('~/.mastotron')
-path_client_secret = os.path.join(path_data, 'clientcred.secret')
-path_user_secret = os.path.join(path_data, 'usercred.secret')
 path_env = os.path.join(path_data, 'config.json')
+app_name = 'mastotron'
 
 API = None
 def get_api():
     global API
-    if API is None:
-        API = Mastotron()
     return API
+
 def set_api(mastotron_obj):
     global API
     API = mastotron_obj
 
 class Mastotron():
-    def __init__(self):
-        # make sure app token exists
-        if not os.path.exists(path_client_secret): 
-            self.create_app()
-        # make sure user token exists
-        if not os.path.exists(path_user_secret):
-            self.api = Mastodon(client_id = path_client_secret)
-            self.log_in()
-        # log in and set app
-        self.api = Mastodon(access_token = path_user_secret)
-
-    def env(self):
-        if not os.path.exists(path_env):
-            envd = {
-                'MASTODON_BASE_URL':input('What is the base URL for your server?\n'),
-            }
-            if not os.path.exists(os.path.dirname(path_env)):
-                os.makedirs(os.path.dirname(path_env))
-            with open(path_env,'w') as of:
-                json.dump(envd, of)
-        else:
-            with open(path_env) as f:
-                envd = json.load(f)
+    def __init__(self, account_name):
         
-        return envd
+        # get un and server from acct name
+        self.username, self.servername = parse_account_name(account_name)
 
+        if not self.username or not self.servername:
+            raise Exception('! Invalid account name !')
 
-    def create_app(self):
-        Mastodon.create_app(
-            'mastotron',
-            api_base_url = self.env().get('MASTODON_BASE_URL'),
-            to_file = path_client_secret
-        )
+        set_api(self)
 
-    def log_in(self):
-        url=self.api.auth_request_url()
-        webbrowser.open(url)
-        code = input('Paste the code from the browser:\n')
-        self.api.log_in(code = code, to_file = path_user_secret)
+    @property
+    def acct(self):
+        return self.username+'@'+self.servername
+    @property
+    def acct_safe(self):
+        return self.username+'__at__'+self.servername
     
 
-    def iter_timeline(self, timeline_type='home', hours_ago=1, max_posts=100):
+    @property
+    def server(self):
+        return f'https://{self.servername}'
+
+    @property
+    def path_client_secret(self):
+        return os.path.join(
+            path_data,
+            self.acct,
+            f'clientcred.secret'
+        )
+
+    @property
+    def path_user_secret(self):
+        return os.path.join(
+            path_data,
+            self.acct,
+            f'usercred.secret'
+        )
+
+    @property
+    def api(self):
+        if not hasattr(self,'_api'):
+            # make sure app token exists
+            self.init_app()
+
+            # make sure user token exists
+            self.init_user()
+
+            # log in and set app
+            self._api = Mastodon(access_token = self.path_user_secret)
+
+        return self._api
+
+    def init_app(self):
+        if not os.path.exists(self.path_client_secret):
+            if not os.path.exists(os.path.dirname(self.path_client_secret)):
+                os.makedirs(os.path.dirname(self.path_client_secret))
+            Mastodon.create_app(
+                app_name,
+                api_base_url = self.server,
+                to_file = self.path_client_secret
+            )
+
+    def init_user(self):
+        if not os.path.exists(self.path_user_secret):
+            if not os.path.exists(os.path.dirname(self.path_user_secret)):
+                os.makedirs(os.path.dirname(self.path_user_secret))
+            
+            if not os.path.exists(self.path_client_secret):
+                self.init_app()
+
+            api = Mastodon(client_id = self.path_client_secret)
+            url=api.auth_request_url()
+            webbrowser.open(url)
+            code = input('Paste the code from the browser:\n')
+            api.log_in(code = code, to_file = self.path_user_secret)
+
+    def iter_timeline(self, max_posts=100, hours_ago=24*7, timeline_type='home'):
         # init vars
         total_posts_seen = 0
         filters = self.api.filters()
@@ -88,10 +121,6 @@ class Mastotron():
                 timeline = self.api.filters_apply(timeline, filters, "home")
             for post in timeline:
                 total_posts_seen += 1
-                # post_is_boost = post['reblog'] is not None
-                # if post_is_boost: post = post['reblog']
-                # post['is_boost'] = post_is_boost
-                # post['is_reply'] = post['in_reply_to_id'] is not None
 
                 if post.url not in seen_post_urls:
                     seen_post_urls.add(post.url)
@@ -105,37 +134,33 @@ class Mastotron():
         iterr=self.iter_timeline(**kwargs)
         return next(iterr)
 
-    def latest_posts(self, max_posts=20, hours_ago=24*7, **kwargs):
+    def latest_posts(self, max_posts=20, **kwargs):
         iterr=self.iter_timeline(
             max_posts=max_posts, 
-            hours_ago=hours_ago, 
             **kwargs
         )
-        return list(iterr)
+        return PostList(iterr)
 
     def timeline(self, **kwargs):
-        return list(self.iter_timeline(**kwargs))
+        return PostList(self.iter_timeline(**kwargs))
 
-    def timeline_df(self, timeline=None, sort_by_score = False, **kwargs):
-        if timeline is None: timeline = self.iter_timeline(**kwargs)
-        
-        odf = pd.DataFrame(timeline)
-        
-        if sort_by_score: 
-            odf = odf.sort_values('score_All', ascending=False)
-        return odf
-
+    def get_post(self, id):
+        return Post(self.api.status(id))
+    get = get_post
+    
+    def Post(self, id=None, **kwargs):
+        return Post(_tron=self, id=id, **kwargs)
 
 
 
 
 class Post(AttribAccessDict):
 
-    def __init__(self,*args,id=None,**kwargs):
+    def __init__(self,*args,id=None,_tron=None,**kwargs):
         ## init self
         if id is not None:
             if not kwargs:
-                kwargs = get_api().api.status(id)
+                kwargs = (get_api() if not _tron else _tron).api.status(id)
             else:
                 kwargs['id'] = id
         
@@ -159,7 +184,7 @@ class Post(AttribAccessDict):
         
                 
 
-    def __repr__(self): return f'Post(id={self.id})'
+    def __repr__(self): return f'tron.Post({self.id})'
     def _repr_html_(self): 
         if self.is_boost:
             o = f'''
@@ -169,7 +194,7 @@ class Post(AttribAccessDict):
                     </p>
                     
                     {self.in_boost_of._repr_html_()}
-                    <br/>
+                    <p>Post ID: {self.id}</p>
 
                 </div>
             '''
@@ -201,7 +226,7 @@ class Post(AttribAccessDict):
                         Post ID: {self.id}
                     </p>
 
-                    {"<p><b><i>... in reply to:</i></b></p> " + self.in_reply_to._repr_html_() + " <br/> " if self.is_reply else ""}
+                    {"<p><i>... in reply to:</i></p> " + self.in_reply_to._repr_html_() + " <br/> " if self.is_reply else ""}
                 </div>
             '''
             
@@ -286,3 +311,46 @@ class Poster(AttribAccessDict):
         return self.following_count
 
 
+
+
+
+from collections import UserList
+
+class PostList(UserList):
+    def __init__(self, l):
+        super().__init__(l)
+    
+    def sort_chron(self):
+        self.sort(key=lambda post: post.created_at, reverse=True)
+
+    def sort_score(self, score_type='All'):
+        self.sort(key=lambda post: post.score(score_type), reverse=True)
+
+
+
+
+
+
+
+
+def parse_account_name(acct):
+    un, server = '', ''
+    acct = acct.strip()
+    
+    if acct and '@' in acct:
+        if acct.startswith('@'):
+            return parse_account_name(acct[1:])
+
+        elif acct.count('@')>1:
+            return parse_account_name(acct.split('/@',1)[-1])
+
+        elif acct.startswith('http'):
+            server, un = acct.split('/@')
+            un = un.split('/')[0]
+            server = server.split('://',1)[-1]
+
+        elif acct.count('@')==1:
+            un, server = acct.split('@',1)
+            server = server.split('/')[0]
+
+    return un,server
