@@ -10,7 +10,7 @@ tron = Mastotron('heuser@zirk.us')
 
 @app.route("/")
 def postnet():
-    g = tron.timeline(max_posts=20).network().graph()
+    g = tron.timeline(max_posts=20, hours_ago=1).network().graph()
 
     def get_node(d):
         odx=dict()

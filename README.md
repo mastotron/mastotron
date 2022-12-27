@@ -2,6 +2,28 @@
 
 Experiments in algorithmifying mastodon
 
+## Use as webserver
+
+```
+# Clone repo
+git clone https://github.com/quadrismegistus/mastotron.git
+
+# move into folder
+cd mastotron
+
+# start a virtual environment
+python -m venv venv
+. venv/bin/activate
+
+# install requirements
+pip install -r requirements.txt
+
+# run flask
+flask --debug run
+```
+
+
+## Use in jupyter/python
 
 ```python
 # load the class

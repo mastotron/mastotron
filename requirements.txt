@@ -1,0 +1,5 @@
+flask
+mastodon
+scipy
+pandas
+networkx
