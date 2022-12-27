@@ -3,3 +3,4 @@ mastodon
 scipy
 pandas
 networkx
+Flask-Session

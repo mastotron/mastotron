@@ -33,11 +33,11 @@ def set_api(mastotron_obj):
     API = mastotron_obj
 
 class Mastotron():
-    def __init__(self, account_name):
+    def __init__(self, account_name, code=None):
         
         # get un and server from acct name
-        self.username, self.servername = parse_account_name(account_name)
-
+        self.username,self.servername = parse_account_name(account_name)
+        self.code=code
         if not self.username or not self.servername:
             raise Exception('! Invalid account name !')
 
@@ -95,8 +95,19 @@ class Mastotron():
                 to_file = self.path_client_secret
             )
 
-    def init_user(self):
-        if not os.path.exists(self.path_user_secret):
+    def auth_request_url(self):
+        self.init_app()
+        api = Mastodon(client_id = self.path_client_secret)
+        url=api.auth_request_url()
+        return url
+
+    def user_is_init(self):
+        self.init_app()
+        return os.path.exists(self.path_user_secret)
+
+    def init_user(self, code=None):
+        if code is None: code=self.code
+        if not self.user_is_init():
             if not os.path.exists(os.path.dirname(self.path_user_secret)):
                 os.makedirs(os.path.dirname(self.path_user_secret))
             
@@ -104,9 +115,11 @@ class Mastotron():
                 self.init_app()
 
             api = Mastodon(client_id = self.path_client_secret)
-            url=api.auth_request_url()
-            webbrowser.open(url)
-            code = input('Paste the code from the browser:\n')
+            if not code:
+                url=api.auth_request_url()
+                webbrowser.open(url)
+                code = input('Paste the code from the browser:\n')
+            
             api.log_in(code = code, to_file = self.path_user_secret)
 
     def iter_timeline(self, max_posts=20, hours_ago=24*7, timeline_type='home'):
@@ -436,8 +449,8 @@ class PostNet:
                 post2 = post.in_reply_to
                 
                 post1id = ensure_post_node(post)
-                post2id = ensure_post_node(post2)
-                # post2id = add_user_post(post2)
+                # post2id = ensure_post_node(post2)
+                post2id = add_user_post(post2)
 
                 G.add_edge(post1id, post2id)
 

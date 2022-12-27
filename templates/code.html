@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Mastotron</title>
+    <style type="text/css">
+        body { font-family:Verdana, Geneva, Tahoma, sans-serif}
+        h1 { font-size:1.5em; }
+        h2 { font-size:1.25em; }
+    </style>
+  </head>
+  <body>
+    <h1>Authenticate mastodon account</h1>
+    <h2>Open <a href="{{url}}" target="_blank">this link</a> and copy/paste the code.</h1>
+    <form method="POST">
+        <input name="code" value="{{code if code else ''}}">
+        <input type="submit" value="Send code">
+    </form>
+
+</body>
