@@ -1,6 +1,7 @@
 import os
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_session import Session
+
 from mastotron import Mastotron
 
 app = Flask(__name__)
