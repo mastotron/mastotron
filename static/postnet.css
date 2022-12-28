@@ -3,6 +3,13 @@ font: 10pt arial;
 color: white;
 background-color: black; 
 }
+#header {
+    position:absolute;
+    top:5px;
+    right:5px;
+    /* letter-spacing: .5em; */
+    color: gray;
+}
 #logmsg {
 font: 10pt arial;
 }
@@ -31,7 +38,7 @@ input {
 background-color: black;
 color: gray;
 border: 0px;
-text-align: right;
+text-align: left;
 }
 #tweet img {
 width: 350px;
@@ -50,12 +57,12 @@ padding:0 1em;
 } */
 
 #config {
-position:absolute;
-top:10px;
-right:10px;
-z-index: 1;
-width:20em;
-height:5em;
-/* background-color: yellow; */
-text-align: right;
+    position:absolute;
+    top:5px;
+    left:5px;
+    z-index: 1;
+    width:20em;
+    height:5em;
+    /* background-color: yellow; */
+    text-align: left;
 }

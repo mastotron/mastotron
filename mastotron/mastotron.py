@@ -348,7 +348,7 @@ class Poster(AttribAccessDict):
         return f'Poster({self.acct})'
 
     def _repr_html_(self, allow_embedded=False, **kwargs):
-        return f'<div class="author"><img src="{self.avatar}" /> <a href="{self.url}" target="_blank">{self.display_name}</a> ({self.followers_count:,} 👥){self.note if allow_embedded else ""}</div>'
+        return f'<div class="author"><img src="{self.avatar}" /> <a href="{self.url_local}" target="_blank">{self.display_name}</a> ({self.followers_count:,} 👥){self.note if allow_embedded else ""}</div>'
 
     @property
     def num_followers(self):
