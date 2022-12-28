@@ -21,9 +21,9 @@ position: absolute;
 top: 10px;
 left: 10px;
 width:400px;
-padding: 1em;
-background-color: rgba(0,0,0,0.75);
-/* border: 1px dotted white; */
+padding: .5em;
+background-color: rgba(11,11,11,0.8);
+border: 1px solid #888888;
 font-size:1.25em;
 backdrop-filter: blur(1px);
 }
@@ -35,7 +35,7 @@ text-align: right;
 }
 #tweet img {
 width: 350px;
-opacity:0.5;
+/* opacity:0.5; */
 }
 #tweet .author img { width:50px; }
 

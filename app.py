@@ -49,15 +49,18 @@ def get_updates(data):
     def get_node(d):
         odx=dict()
         obj=d.get('obj')
+        print([type(obj), obj])
         odx['label']=d.get('label')
-        odx['html'] = obj._repr_html_(allow_embedded=False)
+        odx['url'] = d.get('url')
         if d.get('node_type')=='user':
+            odx['html'] = obj._repr_html_(allow_embedded=True)
             odx['shape']='circularImage'
             odx['image'] = obj.avatar
             odx['size'] = 25
             odx['text'] = obj.display_name
             odx['node_type']='user'
         elif d.get('node_type')=='post':
+            odx['html'] = obj._repr_html_(allow_embedded=False)
             odx['shape']='box'
             odx['label']=obj.label
             odx['text'] = obj.text

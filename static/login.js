@@ -20,17 +20,17 @@ login();
 });
 
 $( "#configform" ).on('keypress',function(e) {
-if(e.which == 13) {
-    login();
-}
+    if(e.which == 13) {
+        login();
+    }
 });
 
 
 socket.on('get_auth_url', function(e){
-$('#configform_code_div').show();
-$('#configform_code').focus();
-url = e.url;
-popupwindow(url, 'Authenticate Mastodon', 500, 700);
+    $('#configform_code_div').show();
+    $('#configform_code').focus();
+    url = e.url;
+    popupwindow(url, 'Authenticate Mastodon', 500, 700);
 });
 
 socket.on('logged_in', function(e){
