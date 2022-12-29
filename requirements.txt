@@ -1,6 +1,10 @@
 flask
-mastodon
+mastodon.py
 scipy
 pandas
 networkx
 Flask-Session
+PyQt6
+PyQt6-WebEngine
+flask_socketio
+IPython

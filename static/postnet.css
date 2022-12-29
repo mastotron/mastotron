@@ -29,10 +29,10 @@ top: 10px;
 left: 10px;
 width:400px;
 padding: .5em;
-background-color: rgba(11,11,11,0.8);
+background-color: rgba(11,11,11,1);
 border: 1px solid #888888;
 font-size:1.25em;
-backdrop-filter: blur(1px);
+/* backdrop-filter: blur(1px); */
 }
 input {
 background-color: black;

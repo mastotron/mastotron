@@ -56,6 +56,7 @@ function add_node() {
 }
 
 function update_nodes() {
+  console.log('update_nodes()');
   socket.emit('get_updates', {time:Date.now()})
 }
 
@@ -66,7 +67,11 @@ function get_node(params) {
   } else if (('nodes' in params) && (params.nodes.length>0)) {
     node = params.nodes[0];
   } else {
-    node = this.getNodeAt(params.pointer.DOM);
+    try {
+      node = this.getNodeAt(params.pointer.DOM);
+    } catch (TypeError) {
+      return undefined;
+    }
   }
   console.log('node is',node);
   if (node != undefined) {
@@ -108,7 +113,7 @@ network.on("doubleClick", function (params) {
   $('#tweet').hide();
   console.log(params);
   node_d = get_node(params);
-  if ((node_d != undefined) & ('url' in node_d)) {
+  if (node_d != undefined) {
     window.open(node_d.url, '_blank');
   } else {
     update_nodes();
@@ -130,11 +135,18 @@ network.on("oncontext", function (params) {
 // socket events
 
 socket.on('get_updates', function(data) {
+  console.log('get_updates', data);
   nodes.update(data.nodes);
   edges.update(data.edges);
 });
 
+function startnet() {
+  console.log('starting network!');
+  update_nodes();
+}
 
-
-// start
-$(document).ready(function(){update_nodes()});
+// // start
+// $(document).ready(function(){
+//   console.log('updating nodes');
+//   update_nodes();
+// });

@@ -122,10 +122,10 @@ class Mastotron():
             
             api.log_in(code = code, to_file = self.path_user_secret)
 
-    def iter_timeline(self, max_posts=20, hours_ago=24*7, timeline_type='home'):
+    def iter_timeline(self, max_posts=20, hours_ago=1,timeline_type='home'):
         # init vars
         total_posts_seen = 0
-        filters = self.api.filters()
+        # filters = self.api.filters()
         seen_post_urls = set()
 
         # Set our start query
@@ -134,8 +134,8 @@ class Mastotron():
         timeline = self.api.timeline(timeline=timeline_type, min_id=start)
         # get filters
         while timeline and total_posts_seen < max_posts:
-            if filters: 
-                timeline = self.api.filters_apply(timeline, filters, "home")
+            # if filters: 
+                # timeline = self.api.filters_apply(timeline, filters, "home")
             for post in timeline:
                 total_posts_seen += 1
 
