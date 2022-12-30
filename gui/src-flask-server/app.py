@@ -101,24 +101,6 @@ def logmsg(x):
     emit('logmsg',{'msg':str(x)})
 
 
-if __name__ == '__main__':
-    import logging
-    import webview
-    from contextlib import redirect_stdout
-    from io import StringIO
-
-    logger = logging.getLogger(__name__)
-    stream = StringIO()
-
-    # def custom_logic(window):
-    #     window.toggle_fullscreen()
-    #     window.evaluate_js('alert("Nice one brother")')
-
-    with redirect_stdout(stream):
-        window = webview.create_window(
-            'mastotron app', 
-            app,
-            fullscreen=True
-        )
-        # webview.start(custom_logic, window, debug=True)
-        webview.start(debug=True)
+if __name__=='__main__': 
+    # print('hello!!!')
+    socketio.run(app,debug=True, allow_unsafe_werkzeug=True)

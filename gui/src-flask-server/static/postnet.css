@@ -3,6 +3,7 @@ font: 10pt arial;
 color: white;
 background-color: black; 
 }
+a { color: lightblue; }
 #header {
     position:absolute;
     top:5px;

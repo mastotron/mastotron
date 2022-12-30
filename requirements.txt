@@ -8,3 +8,6 @@ PyQt6
 PyQt6-WebEngine
 flask_socketio
 IPython
+flask_restful
+flask_cors
+pyinstaller
