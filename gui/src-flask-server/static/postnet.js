@@ -24,7 +24,7 @@ var options = {
     size: 30,
     color: {
       border: "#222222",
-      background: "#666666",
+      // background: "#666666",
       hover: "#777777"
     },
     font: { color: "#eeeeee" },
@@ -55,10 +55,6 @@ function add_node() {
   nodes.update([{id:nodes.length+1, label:'Hello'}]);
 }
 
-function update_nodes() {
-  console.log('update_nodes()');
-  socket.emit('get_updates', {time:Date.now()})
-}
 
 
 function get_node(params) {
@@ -114,7 +110,8 @@ network.on("doubleClick", function (params) {
   console.log(params);
   node_d = get_node(params);
   if (node_d != undefined) {
-    window.open(node_d.url, '_blank');
+    del_nodes(node_d.id);
+    // window.open(node_d.url, '_blank');
   } else {
     update_nodes();
   }
@@ -134,6 +131,13 @@ network.on("oncontext", function (params) {
 
 // socket events
 
+
+function update_nodes() {
+  console.log('update_nodes()');
+  logmsg('refreshing');
+  socket.emit('get_updates', {time:Date.now()})
+}
+
 socket.on('get_updates', function(data) {
   console.log('get_updates', data);
   nodes.update(data.nodes);
@@ -145,8 +149,25 @@ function startnet() {
   update_nodes();
 }
 
-// // start
-// $(document).ready(function(){
-//   console.log('updating nodes');
-//   update_nodes();
+// start
+$(document).ready(function(){  
+  setTimeout(function() {
+    update_nodes();
+  }, 1000);
+  
+  setInterval(function() {
+    update_nodes();
+  }, 30 * 1000);
 // });
+
+  var handle = $( "#custom-handle" );
+  $( "#slider" ).slider({
+    create: function() {
+      handle.text( $( this ).slider( "value" ) );
+    },
+    slide: function( event, ui ) {
+      handle.text( ui.value );
+    }
+  });
+});
+

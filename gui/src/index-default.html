@@ -30,7 +30,68 @@
 
 <body>
 
-  
+  <div id="non-flask-area">
+    <p class="info">This is the electron render process HTML <code>src/index.html</code>.</p>
+    <p class="info">This area is not flask rendered HTML. You can make this HTML <a onclick="hideNonFlaskArea()" style="cursor: pointer">empty</a>, allowing the iframe containing your flask pages to expand to fill this window.
+      Flask pages are rendered by the built in flask server.</p>
+
+    <div class="ui accordion" id="electron-index-vue">
+      <div class="title"> <i class="dropdown icon"></i> Diagnostics </div>
+      <div class="content">
+        <p class="info">Here are some diagnostics from the point of view of the electron <b>render process</b> <code>src/index.html</code>.</p>
+        <div class="ui styled accordion">
+
+          <div class="title"> <i class="dropdown icon"></i> Talking to the flask server </div>
+          <div class="content">
+            <p>See if we can talk to the flask server:</p>
+            <div class="inline field">
+              <button class="ui button green" v-on:click="getInfo">
+                GET
+              </button>
+              JSON response: {{ message }}
+            </div>
+          </div>
+
+          <div class="title"> <i class="dropdown icon"></i> Talking to main process. </div>
+          <div class="content">
+            <p>Communicating with Electron using events.</p>
+            <div class="inline field">
+              <button class="ui button brown" v-on:click="sendEventToMainProcess">
+                Render Process → Main Process (synchronous)
+              </button>
+            </div>
+          </div>
+
+          <div class="title"> <i class="dropdown icon"></i> Talking to iframe. </div>
+          <div class="content">
+            <p>Sending a custom event to the iframe below, where flask pages are loaded into. </p>
+            <p>For best results, first load <i>diagnostic HTML</i> or <i>/hello-vue</i> into the iframe.</p>
+            <div class="inline field">
+              <button class="ui button yellow" v-on:click="sendEventToIframe">
+                Send
+              </button>
+            </div>
+          </div>
+
+          <div class="title"> <i class="dropdown icon"></i> Load iframe with... </div>
+          <div class="content">
+            <p>Load content into iframe</p>
+            <div class="inline field">
+              <button class="ui button blue" v-on:click="doBootIframe">
+                Load default flask page
+              </button>
+              <button class="ui button cyan" v-on:click="doBootIframeDebug">
+                Load diagnostic HTML
+              </button>
+            </div>
+            <br>
+          </div>
+
+        </div> <!-- accordion -->
+      </div> <!-- content -->
+    </div> <!-- outer accordion -->
+  </div>
+
   <iframe id="iframeout" class="flask-pages" style="height: 100%; width: 100%" srcdoc="">
     <p>Your browser does not support iframes.</p>
   </iframe>

@@ -465,8 +465,8 @@ class PostNet:
                 post2 = post.in_reply_to
                 
                 post1id = ensure_post_node(post)
-                # post2id = ensure_post_node(post2)
-                post2id = add_user_post(post2)
+                post2id = ensure_post_node(post2)
+                # post2id = add_user_post(post2)
 
                 G.add_edge(post1id, post2id)
 

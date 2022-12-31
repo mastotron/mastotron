@@ -36,6 +36,8 @@ const createWindow = () => {
     const _mainWindow = new BrowserWindow({
       width: 1000,
       height: 800,
+      frame: false,
+      // titleBarStyle: 'hidden',
 
       webPreferences: {
 
@@ -63,12 +65,22 @@ const createWindow = () => {
 
     });
 
+    // Maximize
+    _mainWindow.maximize();
+
     // Load the initial page of the app. 
     _mainWindow.loadFile(path.join(__dirname, 'index.html'));
     
     
     // Open the DevTools.
     _mainWindow.webContents.openDevTools();
+
+    // Force new windows to be via browser
+    _mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+      require('electron').shell.openExternal(url);
+      return { action: 'deny' };
+    });
+
     
     
     // let boot flask logic know about mainWindow to assist with proper quit

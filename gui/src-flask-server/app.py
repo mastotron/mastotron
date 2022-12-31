@@ -1,4 +1,6 @@
-import os
+import os,sys,random
+sys.path.insert(0,'/Users/ryan/github/mastotron')
+print('PATH',sys.path)
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_session import Session
 from flask_socketio import SocketIO, send, emit
@@ -10,7 +12,7 @@ app.config['SESSION_PERMANENT'] = True
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SESSION_FILE_DIR'] = os.path.join(path_data, 'flask_session')
 Session(app)
-socketio = SocketIO(app, manage_session=False)
+socketio = SocketIO(app, manage_session=False, async_mode="threading")
 
 
 
@@ -18,9 +20,17 @@ tron = None
 
 
 @app.route("/")
+@app.route("/hello/")
+@app.route("/hello-vue/")
 def postnet(): 
     if not session.get('account'): session['account']='heuser@zirk.us'
     return render_template('postnet.html', account=session.get('account',''))
+
+@app.route('/hello//flaskwebgui-keep-server-alive')
+@app.route('/hello/flaskwebgui-keep-server-alive')
+@app.route('/flaskwebgui-keep-server-alive')
+def keepalive():
+    return {'status':200}
     
 @socketio.event
 def set_acct_name(data):
@@ -54,6 +64,7 @@ def get_updates(data):
     if not tron: return
     
     g = tron.timeline(max_posts=20, hours_ago=1).network().graph()
+    print(g.order(), g.size())
 
     def get_node(d):
         odx=dict()
@@ -67,12 +78,14 @@ def get_updates(data):
             odx['size'] = 25
             odx['text'] = obj.display_name
             odx['node_type']='user'
+            odx['color']='#111111'
         elif d.get('node_type')=='post':
             odx['html'] = obj._repr_html_(allow_embedded=False)
             odx['shape']='box'
             odx['label']=obj.label
             odx['text'] = obj.text
             odx['node_type']='post'
+            odx['color'] = '#1f465c' if not obj.is_reply else '#061f2e'
         return odx
 
     nodes = [
@@ -94,6 +107,9 @@ def get_updates(data):
     ]
     
     emit('get_updates', dict(nodes=nodes, edges=edges))
+    logmsg('refreshed')
+
+
 
 
 def logmsg(x):
@@ -102,5 +118,4 @@ def logmsg(x):
 
 
 if __name__=='__main__': 
-    # print('hello!!!')
     socketio.run(app,debug=True, allow_unsafe_werkzeug=True)

@@ -13,6 +13,9 @@ document.addEventListener('DOMContentLoaded', function () {
         getRequest(url + route)
             .then(data => console.log(data))
     }
+    // setInterval(function() {
+    //     keep_alive_server();
+    //   }, interval_request);
     setInterval(keep_alive_server, interval_request)()
 })
 
@@ -43,3 +46,9 @@ socket.on('logmsg', function(e){
 function logmsg(x) {
     $.flash(x);
 }
+
+$(document).ready(function(){
+    setTimeout(function() {
+        $('#flash').fadeOut('slow');
+    }, 3000); // <-- time in milliseconds
+});
