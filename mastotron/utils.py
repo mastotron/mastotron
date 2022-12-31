@@ -24,7 +24,7 @@ def parse_account_name(acct):
         elif acct.startswith('http'):
             server, un = acct.split('/@')
             un = un.split('/')[0]
-            server = server.split('://',1)[-1]
+            server = server.split('://',1)[-1].split('/')[0]
 
         elif acct.count('@')==1:
             un, server = acct.split('@',1)

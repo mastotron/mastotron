@@ -1,4 +1,5 @@
 import os,sys; sys.path.insert(0,'..')
+from functools import cached_property
 from typing import Optional,Union
 import numpy as np
 from mastodon import Mastodon, AttribAccessDict

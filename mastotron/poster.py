@@ -8,6 +8,23 @@ class Poster(AttribAccessDict):
         ## pass into dict init
         super().__init__(*args, **kwargs)
 
+    @property
+    def account(self):
+        un, server = parse_account_name(self.url)
+        return f'{un}@{server}'
+    @property
+    def uri(self): return self.url
+
+    @property
+    def data(self):
+        return dict(
+            uri=self.uri,
+            url_local=self.url_local,
+            text=self.text,
+            html=self.html,
+            num_followers=self.num_followers,
+            num_following=self.num_following
+        )
     
     def __hash__(self):
         return hash(self.acct)
@@ -17,6 +34,12 @@ class Poster(AttribAccessDict):
 
     def __repr__(self):
         return f'Poster({self.acct})'
+
+    @cached_property
+    def html(self): return self._repr_html_(allow_embedded=True)
+
+    @cached_property
+    def text(self): return self.note
 
     def _repr_html_(self, allow_embedded=False, **kwargs):
         return f'<div class="author"><img src="{self.avatar}" /> <a href="{self.url_local}" target="_blank">{self.display_name}</a> ({self.followers_count:,} 👥){self.note if allow_embedded else ""}</div>'

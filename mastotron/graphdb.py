@@ -39,6 +39,4 @@ class GraphDB:
             self.ingest_post(post)
         
 
-
-def Node(uri, **kwargs):
-    pass
+    

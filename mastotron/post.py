@@ -16,24 +16,49 @@ class Post(AttribAccessDict):
         super().__init__(*args, **kwargs)
         
 
-        
-        
     @property
+    def data(self):
+        return dict(
+            uri=self.uri,
+            poster_uri=self.author.uri,
+            url_local=self.url_local,
+            text=self.text,
+            html=self.html,
+            is_boost=self.is_boost,
+            is_reply=self.is_reply,
+            in_boost_of__uri=self.in_boost_of.uri if self.in_boost_of else '',
+            in_reply_to__uri=self.in_reply_to.uri if self.in_reply_to else '',
+        )
+        
+    @cached_property
+    def post_id(self):
+        return os.path.join(self.poster_id, self.url.split('/')[-1])
+    @cached_property
+    def poster_id(self):
+        return self.author.account
+        
+    @cached_property
     def in_boost_of(self):
-        if not hasattr(self,'_post_reposted'):
-            self._post_reposted = Post(self['reblog'], _tron=self._tron) if self['reblog'] else None
-        return self._post_reposted
+        return Post(self['reblog'], _tron=self._tron) if self['reblog'] else None
 
     
-    @property
+    @cached_property
     def in_reply_to(self):
-        if not hasattr(self,'_post_repliedto'):
-            self._post_repliedto = Post(id=self['in_reply_to_id'], _tron=self._tron) if self['in_reply_to_id'] else None
-        return self._post_repliedto
+        return Post(id=self['in_reply_to_id'], _tron=self._tron) if self['in_reply_to_id'] else None
         
+    @property
+    def url_or_uri(self):
+        return self.url if self.url else self.uri
+    
+
                 
 
     def __repr__(self): return f'Post({self.id})'
+
+    @property
+    def html(self):
+        return self._repr_html_(allow_embedded=False)
+
     def _repr_html_(self, allow_embedded = True): 
         if self.is_boost:
             o = f'''
@@ -81,8 +106,9 @@ class Post(AttribAccessDict):
             
         return '\n'.join([ln.lstrip() for ln in o.split('\n')]).strip()
 
-    @property
+    @cached_property
     def author(self):
+        from .poster import Poster
         return Poster(self.get('account',{}), _tron=self._tron)
 
     
@@ -160,4 +186,5 @@ class Post(AttribAccessDict):
             '@'+self.author.acct,
             str(self.id),
         ])
+
 
