@@ -122,10 +122,10 @@ class Mastotron():
             
             api.log_in(code = code, to_file = self.path_user_secret)
 
-    def iter_timeline(self, max_posts=20, hours_ago=24*7, timeline_type='home'):
+    def iter_timeline(self, max_posts=20, hours_ago=1,timeline_type='home'):
         # init vars
         total_posts_seen = 0
-        filters = self.api.filters()
+        # filters = self.api.filters()
         seen_post_urls = set()
 
         # Set our start query
@@ -134,8 +134,8 @@ class Mastotron():
         timeline = self.api.timeline(timeline=timeline_type, min_id=start)
         # get filters
         while timeline and total_posts_seen < max_posts:
-            if filters: 
-                timeline = self.api.filters_apply(timeline, filters, "home")
+            # if filters: 
+                # timeline = self.api.filters_apply(timeline, filters, "home")
             for post in timeline:
                 total_posts_seen += 1
 
@@ -249,7 +249,7 @@ class Post(AttribAccessDict):
 
     @property
     def author(self):
-        return Poster(self.get('account',{}))
+        return Poster(self.get('account',{}), _tron=self._tron)
 
     
     @property
@@ -318,6 +318,9 @@ class Post(AttribAccessDict):
 
     @property
     def url_local(self):
+        return self.get_url_local()
+    
+    def get_url_local(self):
         return '/'.join([
             self._tron.server,
             '@'+self.author.acct,
@@ -327,6 +330,14 @@ class Post(AttribAccessDict):
 
 
 class Poster(AttribAccessDict):
+
+    def __init__(self,*args,_tron=None,**kwargs):
+        ## init self
+        self._tron = (get_api() if not _tron else _tron)
+        ## pass into dict init
+        super().__init__(*args, **kwargs)
+
+    
     def __hash__(self):
         return hash(self.acct)
     
@@ -336,8 +347,8 @@ class Poster(AttribAccessDict):
     def __repr__(self):
         return f'Poster({self.acct})'
 
-    def _repr_html_(self, **kwargs):
-        return f'<div class="author"><img src="{self.avatar}" /> <a href="{self.url}" target="_blank">{self.display_name}</a> ({self.followers_count:,} 👥)</div>'
+    def _repr_html_(self, allow_embedded=False, **kwargs):
+        return f'<div class="author"><img src="{self.avatar}" /> <a href="{self.url_local}" target="_blank">{self.display_name}</a> ({self.followers_count:,} 👥){self.note if allow_embedded else ""}</div>'
 
     @property
     def num_followers(self):
@@ -349,10 +360,13 @@ class Poster(AttribAccessDict):
 
     @property
     def url_local(self):
-        return os.path.join(
+        return self.get_url_local()
+    
+    def get_url_local(self):
+        return '/'.join([
             self._tron.server,
-            self.author.acct
-        )
+            '@'+self.acct,
+        ])
 
 
 
@@ -407,6 +421,7 @@ class PostNet:
                     node_type='post',
                     label=post.text[:50],
                     text=post.text,
+                    url=post.url_local,
                     obj=post
                 )
             return post_id
@@ -424,7 +439,8 @@ class PostNet:
                     node_type='user',
                     label = user.display_name,
                     text = user.display_name,
-                    obj = user
+                    obj = user,
+                    url = user.url_local
                 )
             return user_id
         
@@ -449,8 +465,8 @@ class PostNet:
                 post2 = post.in_reply_to
                 
                 post1id = ensure_post_node(post)
-                # post2id = ensure_post_node(post2)
-                post2id = add_user_post(post2)
+                post2id = ensure_post_node(post2)
+                # post2id = add_user_post(post2)
 
                 G.add_edge(post1id, post2id)
 
@@ -579,3 +595,5 @@ def parse_account_name(acct):
             server = server.split('/')[0]
 
     return un,server
+
+

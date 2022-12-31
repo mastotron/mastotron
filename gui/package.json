@@ -1,0 +1,66 @@
+{
+  "name": "gui",
+  "productName": "gui",
+  "version": "1.0.0",
+  "description": "mastotron gui",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "publish": "electron-forge publish",
+    "lint": "echo \"No linting configured\""
+  },
+  "keywords": ["mastodon","social media","twitter"],
+  "author": {
+    "name": "Ryan Heuser",
+    "email": "ryan.heuser@gmail.com"
+  },
+  "license": "MIT",
+  "config": {
+    "forge": {
+      "packagerConfig": {
+        "extraResource": "",
+        "ignore": "/venv/*|/bin/*|/build/*|/src-flask-server/*"
+      },
+      "makers": [
+        {
+          "name": "@electron-forge/maker-squirrel",
+          "config": {
+            "name": "junk"
+          }
+        },
+        {
+          "name": "@electron-forge/maker-zip",
+          "platforms": [
+            "darwin"
+          ]
+        },
+        {
+          "name": "@electron-forge/maker-deb",
+          "config": {}
+        },
+        {
+          "name": "@electron-forge/maker-rpm",
+          "config": {}
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "request": "^2.88.2",
+    "electron-create-menu": "^3.0.1",
+    "electron-squirrel-startup": "^1.0.0",
+    "electron-log": "^4.3.5",
+    "tree-kill": "^1.2.2",
+    "shelljs": "^0.8.4"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^6.0.0-beta.54",
+    "@electron-forge/maker-deb": "^6.0.0-beta.54",
+    "@electron-forge/maker-rpm": "^6.0.0-beta.54",
+    "@electron-forge/maker-squirrel": "^6.0.0-beta.54",
+    "@electron-forge/maker-zip": "^6.0.0-beta.54",
+    "electron": "13.1.2"
+  }
+}
