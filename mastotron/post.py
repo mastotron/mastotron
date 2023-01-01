@@ -28,6 +28,8 @@ class Post(AttribAccessDict):
             is_reply=self.is_reply,
             in_boost_of__uri=self.in_boost_of.uri if self.in_boost_of else '',
             in_reply_to__uri=self.in_reply_to.uri if self.in_reply_to else '',
+
+            **self.scores()
         )
         
     @cached_property

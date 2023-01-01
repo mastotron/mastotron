@@ -147,3 +147,7 @@ class Mastotron():
     def get_post(self, id):
         return Post(self.api.status(id), _tron=self)
     
+
+    @cached_property
+    def gdb(self):
+        return GraphDB(self)

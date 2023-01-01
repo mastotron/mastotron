@@ -19,11 +19,15 @@ class Poster(AttribAccessDict):
     def data(self):
         return dict(
             uri=self.uri,
+            account=self.account,
+            name=self.display_name,
             url_local=self.url_local,
             text=self.text,
             html=self.html,
             num_followers=self.num_followers,
-            num_following=self.num_following
+            num_following=self.num_following,
+            is_bot=self.bot,
+            is_org=self.group,
         )
     
     def __hash__(self):
@@ -39,7 +43,7 @@ class Poster(AttribAccessDict):
     def html(self): return self._repr_html_(allow_embedded=True)
 
     @cached_property
-    def text(self): return self.note
+    def text(self): return unhtml(self.note).strip() if self.note else ''
 
     def _repr_html_(self, allow_embedded=False, **kwargs):
         return f'<div class="author"><img src="{self.avatar}" /> <a href="{self.url_local}" target="_blank">{self.display_name}</a> ({self.followers_count:,} 👥){self.note if allow_embedded else ""}</div>'

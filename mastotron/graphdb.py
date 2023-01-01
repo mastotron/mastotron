@@ -33,10 +33,15 @@ class GraphDB:
     def g(self): return self._g
     @property
     def db(self): return self._db
+    d = db
 
     def update(self, timeline_type='home'):
         for post in self._tron.iter_timeline(timeline_type=timeline_type):
+            print(post)
             self.ingest_post(post)
-        
 
-    
+    def ingest_post(self, post):
+        print(post.data)
+        self.d[post.uri] = post.data
+        self.d[post.author.uri] = post.author.data
+        self.g.put(post.author.uri,'posted',post.uri)
