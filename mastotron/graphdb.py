@@ -35,13 +35,16 @@ class GraphDB:
     def db(self): return self._db
     d = db
 
-    def update(self, timeline_type='home'):
-        for post in self._tron.iter_timeline(timeline_type=timeline_type):
-            print(post)
-            self.ingest_post(post)
+    def update(self, timeline_type='home', max_posts=100, hours_ago=24):
+        for post in self._tron.iter_timeline(
+                timeline_type=timeline_type,
+                max_posts=max_posts,
+                hours_ago=hours_ago):
+            self.ingest_post(post, timeline_type=timeline_type)
 
-    def ingest_post(self, post):
-        print(post.data)
-        self.d[post.uri] = post.data
-        self.d[post.author.uri] = post.author.data
-        self.g.put(post.author.uri,'posted',post.uri)
+    def ingest_post(self, post, force=False, **extra):
+        if force or not post.uri in self.d:
+            print(f'>> ingesting: {post.uri}')
+            self.d[post.uri] = {**post.data, **extra}
+            self.d[post.author.uri] = post.author.data
+            self.g.put(post.author.uri,'posted',post.uri)

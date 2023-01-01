@@ -28,7 +28,12 @@ class Poster(AttribAccessDict):
             num_following=self.num_following,
             is_bot=self.bot,
             is_org=self.group,
+            timestamp=self.timestamp,
         )
+
+    @property
+    def timestamp(self):
+        return int(round(self.created_at.timestamp()))
     
     def __hash__(self):
         return hash(self.acct)

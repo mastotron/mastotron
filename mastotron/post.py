@@ -28,9 +28,14 @@ class Post(AttribAccessDict):
             is_reply=self.is_reply,
             in_boost_of__uri=self.in_boost_of.uri if self.in_boost_of else '',
             in_reply_to__uri=self.in_reply_to.uri if self.in_reply_to else '',
-
-            **self.scores()
+            timestamp=self.timestamp,
+            
+            **{f'score_{k}':v for k,v in self.scores().items()}
         )
+
+    @property
+    def timestamp(self):
+        return int(round(self.created_at.timestamp()))
         
     @cached_property
     def post_id(self):
