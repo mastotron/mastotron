@@ -133,6 +133,7 @@ class Mastotron():
     def latest_post(self, **kwargs):
         iterr=self.iter_timeline(**kwargs)
         return next(iterr)
+    latest = latest_post
 
     def latest_posts(self, max_posts=20, **kwargs):
         iterr=self.iter_timeline(

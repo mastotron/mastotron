@@ -1,5 +1,30 @@
 from .imports import *
 
+class dbPost(SQLModel, table=True):
+    uri: str = Field(default=None, primary_key=True)
+    poster_uri: str = Field(default=None, foreign_key="dbposter.uri")
+    poster:'dbPoster' = Relationship(back_populates='posts')
+    url_local: str
+    content: str
+    is_boost: bool
+    is_reply: bool
+    in_boost_of__uri: str = Field(default=None, foreign_key="dbpost.uri")
+    # in_boost_of: Optional['dbPost'] = Relationship()
+    in_reply_to__uri: str = Field(default=None, foreign_key="dbpost.uri")
+    # in_reply_to: Optional['dbPost'] = Relationship()
+
+    timestamp: int
+    score: float
+    # scores: Dict[str,float]
+    json_s: str
+
+
+    def hello(self):
+        print(self.uri,'!!!')
+
+
+
+
 class Post(AttribAccessDict):
 
     def __init__(self,*args,id=None,_tron=None,**kwargs):
