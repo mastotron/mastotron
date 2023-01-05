@@ -22,7 +22,8 @@ class GraphDB:
         # self._db = SqliteDict(self.path_db, autocommit=True)
         # self._db.create_or_load_namespace(f"{self.name}_ns")
         # self._db.create_table(f"{self.name}_db", f"{self.name}_ns")
-        self._db = TinyDB(self.path_db)
+        # self._db = TinyDB(self.path_db)
+        
 
     @property
     def path_g(self):

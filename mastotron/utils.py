@@ -32,3 +32,11 @@ def parse_account_name(acct):
 
     return un,server
 
+def get_server_name(server):
+    return server.split('://',1)[-1].split('/',1)[0]
+
+def get_status_id(url):
+    for x in reversed(url.split('/')):
+        if x and x.isdigit():
+            return int(x)
+

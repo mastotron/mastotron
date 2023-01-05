@@ -1,5 +1,8 @@
 from .imports import *
 
+
+
+
 class dbPost(SQLModel, table=True):
     uri: str = Field(default=None, primary_key=True)
     poster_uri: str = Field(default=None, foreign_key="dbposter.uri")
@@ -25,21 +28,7 @@ class dbPost(SQLModel, table=True):
 
 
 
-class Post(AttribAccessDict):
-
-    def __init__(self,*args,id=None,_tron=None,**kwargs):
-        ## init self
-        self._tron = (get_api() if not _tron else _tron)
-
-        if id is not None:
-            if not kwargs:
-                kwargs = self._tron.api.status(id)
-            else:
-                kwargs['id'] = id
-        
-        ## pass into dict init
-        super().__init__(*args, **kwargs)
-        
+class Post(AttribAccessDict):    
 
     @property
     def data(self):
