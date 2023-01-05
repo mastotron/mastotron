@@ -1,7 +1,6 @@
 from .imports import *
 
 
-
 class Mastotron():
     def __init__(self):
         self._api = {}
@@ -66,20 +65,65 @@ class Mastotron():
     @cached_property
     def db(self):
         from sqlitedict import SqliteDict
-        return SqliteDict(self.path_db, autocommit=True)
+        return SqliteDict(path_db, autocommit=True)
     
-    def status_d(self, url):
+    def status(self, url, **post_d):
         if not url in self.db:
-            server_name = get_server_name(url)
-            status_id = get_status_id(url)
-            post_d=self.api(server_name).status(status_id)
+            if not post_d:
+                server_name = get_server_name(url)
+                status_id = get_status_id(url)
+                #post_d=self.api(server_name).status(status_id)
+                post_d = mastodon_post_d
             self.db[url] = post_d
         else:
             post_d = self.db.get(url)
         return post_d
+
+    def post(self, url, as_dict=False, **post_d):
+        post_d = self.status(url, **post_d)
+        if as_dict: return post_d
+        return PostModel(post_d)
     
+
+    def timeline(self, account_name, max_posts=20, hours_ago=1,timeline_type='home'):
+        # init vars
+        total_posts_seen = 0
+        filters = self.api.filters()
+        seen_post_urls = set()
+
+        # Set our start query
+        start = datetime.now(timezone.utc) - timedelta(hours=hours_ago)
+        # get initial response
+        timeline = self.api.timeline(timeline=timeline_type, min_id=start)
+        # get filters
+        while timeline and total_posts_seen < max_posts:
+            if filters: 
+                timeline = self.api.filters_apply(timeline, filters, "home")
+            for post_d in timeline:
+                total_posts_seen += 1
+
+                if post_d.url not in seen_post_urls:
+                    seen_post_urls.add(post_d.url)
+                    yield self.post(post_d.url, **post_d)
+
+            # keep going
+            timeline = self.api.fetch_previous(timeline)
+
+    def latest_post(self, **kwargs):
+        iterr=self.timeline(**kwargs)
+        return next(iterr)
+    latest = latest_post
+
+    def latest_posts(self, max_posts=20, **kwargs):
+        iterr=self.iter_timeline(
+            max_posts=max_posts, 
+            **kwargs
+        )
+        return PostList(iterr)
+
+    
+
         
-     
 
 
 

@@ -1,27 +1,7 @@
 from .imports import *
 
 
-class dbPoster(SQLModel, table=True):
-    uri: str = Field(default=None, primary_key=True)
-    account_name: str
-    display_name: str
-    desc: str
-    num_followers: int
-    num_following: int
-    is_bot: bool
-    is_org: bool
-    timestamp: int
-    json_s: str
-    posts: List['dbPost'] = Relationship(back_populates='poster')
-
-
 class Poster(AttribAccessDict):
-
-    def __init__(self,*args,_tron=None,**kwargs):
-        ## init self
-        self._tron = (get_api() if not _tron else _tron)
-        ## pass into dict init
-        super().__init__(*args, **kwargs)
 
     @property
     def account(self):
@@ -57,7 +37,7 @@ class Poster(AttribAccessDict):
         return self.acct == other.acct
 
     def __repr__(self):
-        return f'Poster({self.acct})'
+        return f'Poster({self.account})'
 
     @cached_property
     def html(self): return self._repr_html_(allow_embedded=True)

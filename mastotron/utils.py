@@ -40,3 +40,13 @@ def get_status_id(url):
         if x and x.isdigit():
             return int(x)
 
+
+
+
+TRON=None
+def get_tron():
+    global TRON
+    if TRON is None: 
+        from .mastotron import Mastotron
+        TRON=Mastotron()
+    return TRON

@@ -1,41 +1,17 @@
 from .imports import *
 
 
+def Post(url, as_dict=False, **post_d):
+    tron=get_tron()
+    return tron.post(url, as_dict=as_dict, **post_d)
 
+class PostModel(AttribAccessDict):    
 
-class dbPost(SQLModel, table=True):
-    uri: str = Field(default=None, primary_key=True)
-    poster_uri: str = Field(default=None, foreign_key="dbposter.uri")
-    poster:'dbPoster' = Relationship(back_populates='posts')
-    url_local: str
-    content: str
-    is_boost: bool
-    is_reply: bool
-    in_boost_of__uri: str = Field(default=None, foreign_key="dbpost.uri")
-    # in_boost_of: Optional['dbPost'] = Relationship()
-    in_reply_to__uri: str = Field(default=None, foreign_key="dbpost.uri")
-    # in_reply_to: Optional['dbPost'] = Relationship()
-
-    timestamp: int
-    score: float
-    # scores: Dict[str,float]
-    json_s: str
-
-
-    def hello(self):
-        print(self.uri,'!!!')
-
-
-
-
-class Post(AttribAccessDict):    
-
-    @property
     def data(self):
         return dict(
             uri=self.uri,
             poster_uri=self.author.uri,
-            url_local=self.url_local,
+            url_local=self.get_url_local(),
             text=self.text,
             html=self.html,
             is_boost=self.is_boost,
@@ -74,7 +50,7 @@ class Post(AttribAccessDict):
 
                 
 
-    def __repr__(self): return f'Post({self.id})'
+    def __repr__(self): return f"Post('{self.url_or_uri}')"
 
     @property
     def html(self):
@@ -127,10 +103,10 @@ class Post(AttribAccessDict):
             
         return '\n'.join([ln.lstrip() for ln in o.split('\n')]).strip()
 
-    @cached_property
+    @property
     def author(self):
         from .poster import Poster
-        return Poster(self.get('account',{}), _tron=self._tron)
+        return Poster(self.get('account',{}))
 
     
     @property
@@ -196,16 +172,3 @@ class Post(AttribAccessDict):
         stext = self.spoiler_text
         if not stext: stext=' '.join(w for w in self.text.split() if w and w[0]!='@')
         return stext[:limsize]
-
-    @property
-    def url_local(self):
-        return self.get_url_local()
-    
-    def get_url_local(self):
-        return '/'.join([
-            self._tron.server,
-            '@'+self.author.acct,
-            str(self.id),
-        ])
-
-
