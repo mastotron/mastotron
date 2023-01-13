@@ -29,6 +29,10 @@ var options = {
     },
     font: { color: "#eeeeee" },
   },
+
+  physics: {
+    // wind: { x: 0, y: .25 }
+  }
 };
 
 var network = new vis.Network(container,data, options);
@@ -151,23 +155,24 @@ function startnet() {
 
 // start
 $(document).ready(function(){  
-  setTimeout(function() {
-    update_nodes();
-  }, 1000);
-  
-  setInterval(function() {
-    update_nodes();
-  }, 30 * 1000);
-// });
+  startnet();
 
-  var handle = $( "#custom-handle" );
-  $( "#slider" ).slider({
-    create: function() {
-      handle.text( $( this ).slider( "value" ) );
-    },
-    slide: function( event, ui ) {
-      handle.text( ui.value );
-    }
-  });
+  // setTimeout(function() { update_nodes(); }, 1000);
+  socket.emit('start_updates');
+  
+  // setInterval(function() { socket.emit('get_pushes'); }, 1 * 1000);
+  setInterval(function() { socket.emit('get_updates'); }, 30 * 1000);
+
+
+  // var handle = $( "#custom-handle" );
+  // $( "#slider" ).slider({
+  //   create: function() {
+  //     handle.text( $( this ).slider( "value" ) );
+  //   },
+  //   slide: function( event, ui ) {
+  //     handle.text( ui.value );
+  //   }
+  // });
+
 });
 

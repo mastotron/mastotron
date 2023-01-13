@@ -1,7 +1,8 @@
 body {
 font: 10pt arial;
 color: white;
-background-color: black; 
+/* background-color: black;  */
+background-color: lightgray; 
 }
 a { color: lightblue; }
 #header {

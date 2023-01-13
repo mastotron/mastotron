@@ -50,3 +50,14 @@ def get_tron():
         from .mastotron import Mastotron
         TRON=Mastotron()
     return TRON
+
+class DictModel:
+    def __init__(self, data_d={}, **kwargs):
+        self._data = {**(data_d if data_d else {}), **(kwargs if kwargs else {})}
+
+    def __getattr__(self, name):
+        try:
+            return self.__getattribute__(name)
+        except AttributeError:
+            return self._data.get(name)
+

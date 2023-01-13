@@ -1,11 +1,26 @@
-import os,sys,random
+# make sure to use eventlet and call eventlet.monkey_patch()
+import eventlet
+eventlet.monkey_patch()
+
+import os,sys,random,time
+from threading import Lock
 sys.path.insert(0,'/Users/ryan/github/mastotron')
-print('PATH',sys.path)
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, current_app
 from flask_session import Session
 from flask_socketio import SocketIO, send, emit
-from mastotron import Mastotron, path_data
+from mastotron import Tron, path_data, PostModel
+from mastodon import StreamListener
 
+namespace = 'mastotron.web'
+
+def emitt(name, data, **kwargs):
+    # kwargs['namespace']=namespace
+    emit(name, data, **kwargs)
+
+
+def logmsg(x):
+    print(x)
+    emitt('logmsg',{'msg':str(x)})
 
 app = Flask(__name__)
 app.config['SESSION_PERMANENT'] = True
@@ -13,10 +28,6 @@ app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SESSION_FILE_DIR'] = os.path.join(path_data, 'flask_session')
 Session(app)
 socketio = SocketIO(app, manage_session=False, async_mode="threading")
-
-
-
-tron = None
 
 
 @app.route("/")
@@ -34,88 +45,102 @@ def keepalive():
     
 @socketio.event
 def set_acct_name(data):
-    global tron
-    print('??',data)
+    tron = Tron()
     acct = data.get('account')
-    print('?? ??',acct)
-
     if acct:
         session['account'] = acct
-        print('session!',session)
-        tron = Mastotron(acct)
-        if not tron.user_is_init():
+        if not tron.user_is_init(acct):
             logmsg('Please enter activation code')
-            emit('get_auth_url', {'url':tron.auth_request_url()} )
+            emitt('get_auth_url', {'url':tron.auth_request_url()} )
         else:
             logmsg(f'logged in as {acct}')
 
+
+
+# @socketio.event
+# def do_login(data):
+#     global tron
+#     acct = data.get('account')
+#     code = data.get('code')
+#     tron = Tron()#Mastotron(acct, code=code)
+#     emitt('logged_in', {'msg':'Successfully logged in'})
+
+
+
+def get_acct_name(data={}):
+    return session.get('account')
+
+
+#########
+# GRAPH #
+#########
+
+new_urls = set()
+class NodeListener(StreamListener):
+    def on_update(self, status):
+        url = status.get('url')
+        post = Tron().post(url)
+        if post: 
+            new_urls.add(post)
+
+
 @socketio.event
-def do_login(data):
-    global tron
-    acct = data.get('account')
-    code = data.get('code')
-    tron = Mastotron(acct, code=code)
-    emit('logged_in', {'msg':'Successfully logged in'})
-
+def start_updates(data={}):
+    for post in Tron().latest():
+        add_post(post)
+    return
+    acct = get_acct_name(data)
+    Tron().api_user(acct).stream_local(NodeListener(), run_async=True)
 
 
 @socketio.event
-def get_updates(data):
-    if not tron: return
+def get_updates(data={}):
+    print('get_updates')
+
+    acct = get_acct_name()
+    if acct:
+        for post in Tron().timeline_iter(acct, timeline_type='local'):
+            add_post(post)
+
+
+seen_posts = set()
+def add_post(post):
+    global seen_posts
+
+    if not post: return
+    post = Tron().post(post) if type(post)==str else post
     
-    g = tron.timeline(max_posts=20, hours_ago=1).network().graph()
-    print(g.order(), g.size())
 
-    def get_node(d):
-        odx=dict()
-        obj=d.get('obj')
-        odx['label']=d.get('label')
-        odx['url'] = d.get('url')
-        if d.get('node_type')=='user':
-            odx['html'] = obj._repr_html_(allow_embedded=True)
-            odx['shape']='circularImage'
-            odx['image'] = obj.avatar
-            odx['size'] = 25
-            odx['text'] = obj.display_name
-            odx['node_type']='user'
-            odx['color']='#111111'
-        elif d.get('node_type')=='post':
-            odx['html'] = obj._repr_html_(allow_embedded=False)
-            odx['shape']='box'
-            odx['label']=obj.label
-            odx['text'] = obj.text
-            odx['node_type']='post'
-            odx['color'] = '#1f465c' if not obj.is_reply else '#061f2e'
-        return odx
+    nodes = []
+    edges = []
 
-    nodes = [
-        dict(
-            id=node,
-            **get_node(d)
-        )
-        for node,d in g.nodes(data=True)
-    ]
+    if post.is_valid() and post.author.is_valid():
+        if post in seen_posts: return
+        seen_posts.add(post)
+        print(f'>> adding post: {post}')
 
-    edges = [
-        {
-            'id':ei+1,
-            'from':n1, 
-            'to':n2,
-            
-        }
-        for ei,(n1,n2,d) in enumerate(g.edges(data=True))
-    ]
-    
-    emit('get_updates', dict(nodes=nodes, edges=edges))
-    logmsg('refreshed')
+        nodes.append({'id':post.uri, **post.node_data})
+        nodes.append({'id':post.author.uri, **post.author.node_data})
+
+        if not post.in_reply_to: 
+            edges.append({'id':post.uri+'__'+post.author.uri, 'from':post.author.uri, 'to':post.uri})
+        else:
+            add_post(post.in_reply_to)
+            edges.append({'id':post.in_reply_to.uri+'__'+post.uri, 'from':post.in_reply_to.uri, 'to':post.uri})
+
+        if post.in_boost_of: 
+            add_post(post.in_boost_of)
+            edges.append({'id':post.uri+'__'+post.in_boost_of.uri, 'from':post.uri, 'to':post.in_boost_of.uri})
+        
+        
+        emitt('get_updates', dict(nodes=nodes, edges=edges))
 
 
 
 
-def logmsg(x):
-    print(x)
-    emit('logmsg',{'msg':str(x)})
+
 
 
 if __name__=='__main__': 
     socketio.run(app,debug=True, allow_unsafe_werkzeug=True)
+    

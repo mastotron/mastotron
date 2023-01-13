@@ -1,14 +1,18 @@
 from .imports import *
 
 
-class Poster(AttribAccessDict):
+class Poster(DictModel):
 
     @property
     def account(self):
         un, server = parse_account_name(self.url)
         return f'{un}@{server}'
+    
     @property
     def uri(self): return self.url
+
+    def is_valid(self):
+        return bool(self.uri)
 
     @property
     def data(self):
@@ -46,24 +50,27 @@ class Poster(AttribAccessDict):
     def text(self): return unhtml(self.note).strip() if self.note else ''
 
     def _repr_html_(self, allow_embedded=False, **kwargs):
-        return f'<div class="author"><img src="{self.avatar}" /> <a href="{self.url_local}" target="_blank">{self.display_name}</a> ({self.followers_count:,} 👥){self.note if allow_embedded else ""}</div>'
+        return f'<div class="author"><img src="{self.avatar}" /> <a href="{self.url}" target="_blank">{self.display_name}</a> ({self.followers_count:,} 👥){self.note if allow_embedded else ""}</div>'
 
     @property
     def num_followers(self):
-        return self.followers_count
+        return self.followers_count if self.followers_count else 0
 
     @property
     def num_following(self):
-        return self.following_count
+        return self.following_count if self.following_count else 0
 
-    @property
-    def url_local(self):
-        return self.get_url_local()
-    
-    def get_url_local(self):
-        return '/'.join([
-            self._tron.server,
-            '@'+self.acct,
-        ])
+    def get_url_local(self, server):
+        return '/'.join([server,'@'+self.acct])
 
-
+    @cached_property
+    def node_data(self):
+        odx={}
+        odx['html'] = self._repr_html_(allow_embedded=True)
+        odx['shape']='circularImage'
+        odx['image'] = self.avatar
+        odx['size'] = 25
+        odx['text'] = self.display_name
+        odx['node_type']='user'
+        odx['color']='#111111'
+        return odx

@@ -177,4 +177,3 @@ class PostNet:
         nt.from_nx(g)
         return nt.show('nx.html')
 
-

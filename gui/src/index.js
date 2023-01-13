@@ -40,6 +40,7 @@ const createWindow = () => {
       // titleBarStyle: 'hidden',
 
       webPreferences: {
+        devTools: false,
 
         // Turn off webSecurity to allow events from iframe flask pages to get into render process html
         // there may be other solutions e.g. https://stackoverflow.com/questions/25098021/securityerror-blocked-a-frame-with-origin-from-accessing-a-cross-origin-frame
