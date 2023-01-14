@@ -26,12 +26,22 @@ from sqlitedict import SqliteDict
 warnings.filterwarnings('ignore')
 import requests
 from itertools import islice
+import logging
+import logging as log
+logging.getLogger().setLevel(logging.INFO)  # choose your level here
+from tqdm import tqdm
+import mastodon
+
+
+
+
 
 
 path_data = os.path.expanduser('~/.mastotron')
 path_env = os.path.join(path_data, 'config.json')
 path_db = os.path.join(path_data, 'db.sqlitedict')
 path_tinydb = os.path.join(path_data, 'db.tinydb')
+path_blitzdb = os.path.join(path_data, 'db.blitzdb')
 app_name = 'mastotron'
 API = None
 

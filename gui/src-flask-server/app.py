@@ -104,36 +104,39 @@ def get_updates(data={}):
 
 
 seen_posts = set()
-def add_post(post):
+def add_post(post, with_context = True):
     global seen_posts
 
     if not post: return
     post = Tron().post(post) if type(post)==str else post
     
-
     nodes = []
     edges = []
 
     if post.is_valid() and post.author.is_valid():
         if post in seen_posts: return
         seen_posts.add(post)
-        print(f'>> adding post: {post}')
 
         nodes.append({'id':post.uri, **post.node_data})
         nodes.append({'id':post.author.uri, **post.author.node_data})
-
-        if not post.in_reply_to: 
+        
+        if not post.in_reply_to or post.in_reply_to.author != post.author:
             edges.append({'id':post.uri+'__'+post.author.uri, 'from':post.author.uri, 'to':post.uri})
-        else:
-            add_post(post.in_reply_to)
-            edges.append({'id':post.in_reply_to.uri+'__'+post.uri, 'from':post.in_reply_to.uri, 'to':post.uri})
 
+        if post.in_reply_to: 
+            add_post(post.in_reply_to)
+            edges.append({'id':post.in_reply_to.uri+'__'+post.uri, 'from':post.uri, 'to':post.in_reply_to.uri})
+        
         if post.in_boost_of: 
             add_post(post.in_boost_of)
             edges.append({'id':post.uri+'__'+post.in_boost_of.uri, 'from':post.uri, 'to':post.in_boost_of.uri})
         
-        
         emitt('get_updates', dict(nodes=nodes, edges=edges))
+
+
+    if with_context:
+        for post in post.above:
+            add_post(post, with_context=False)
 
 
 

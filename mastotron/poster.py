@@ -50,7 +50,7 @@ class Poster(DictModel):
     def text(self): return unhtml(self.note).strip() if self.note else ''
 
     def _repr_html_(self, allow_embedded=False, **kwargs):
-        return f'<div class="author"><img src="{self.avatar}" /> <a href="{self.url}" target="_blank">{self.display_name}</a> ({self.followers_count:,} 👥){self.note if allow_embedded else ""}</div>'
+        return f'<div class="author"><img src="{self.avatar}" width="50" height="50" /> <a href="{self.url}" target="_blank">{self.display_name}</a> ({self.followers_count:,} 👥){self.note if allow_embedded else ""}</div>'
 
     @property
     def num_followers(self):

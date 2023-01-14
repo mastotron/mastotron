@@ -14,7 +14,7 @@ var options = {
     arrows: {
       to: {
         enabled: true,
-        scaleFactor: .6,
+        scaleFactor: .4,
       }
     }
   },
@@ -158,10 +158,10 @@ $(document).ready(function(){
   startnet();
 
   // setTimeout(function() { update_nodes(); }, 1000);
-  socket.emit('start_updates');
+  // socket.emit('start_updates');
   
   // setInterval(function() { socket.emit('get_pushes'); }, 1 * 1000);
-  setInterval(function() { socket.emit('get_updates'); }, 30 * 1000);
+  // setInterval(function() { socket.emit('get_updates'); }, 30 * 1000);
 
 
   // var handle = $( "#custom-handle" );

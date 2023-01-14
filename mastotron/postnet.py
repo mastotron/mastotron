@@ -2,95 +2,39 @@ from .imports import *
 
 class PostNet:
     def __init__(self, posts):
+        from .postlist import PostList
+        
         self.posts = (
             PostList(posts)
             if type(posts)!=PostList
             else posts
         )
-
+    
     def graph(self):
-        # start graph
-        G=nx.DiGraph()
-        # funcs
-        node2int = {}
-        int2node = {}
-        def ensure_post_node(post):
-            post_name = str(post)
-            post_id = node2int.get(post_name)
-            if post_id is None: post_id = G.order()+1
-
-            if not G.has_node(post_id):    
-                node2int[post_name]=post_id
-                G.add_node(
-                    post_id,
-                    name=post_name,
-                    node_type='post',
-                    label=post.text[:50],
-                    text=post.text,
-                    url=post.url_local,
-                    obj=post
-                )
-            return post_id
-
-        def ensure_user_node(user):
-            user_name = str(user)
-            user_id = node2int.get(user_name)
-            if user_id is None: user_id = G.order()+1
-            if not G.has_node(user_id):
-                node2int[user_name]=user_id
-
-                G.add_node(
-                    user_id,
-                    name=user_name,
-                    node_type='user',
-                    label = user.display_name,
-                    text = user.display_name,
-                    obj = user,
-                    url = user.url_local
-                )
-            return user_id
+        g=nx.DiGraph()
         
-        def add_user_post(post):
-            user = post.author
-            uid=ensure_user_node(user)
+        def ensure_node(node):
+            if not g.has_node(node._id):
+                g.add_node(node._id, **node.data)
+        
+        def ensure_edge(n1,n2, **eopts):
+            if not g.has_edge(n1._id, n2._id):
+                g.add_edge(n1._id, n2._id, **eopts)
 
-            if post.is_boost:
-                uid2=ensure_user_node(post.in_boost_of.author)
-                pid=ensure_post_node(post.in_boost_of)
-                if not G.has_edge(uid,uid2): G.add_edge(uid,uid2)
-                if not G.has_edge(uid2,pid): G.add_edge(uid2,pid)
-            else:
-                pid=ensure_post_node(post)
-                if not G.has_edge(uid,pid): G.add_edge(uid,pid)
-
-            add_replies(post)
-            return pid
-
-        def add_replies(post):
-            if post.is_reply:
-                post2 = post.in_reply_to
-                
-                post1id = ensure_post_node(post)
-                post2id = ensure_post_node(post2)
-                # post2id = add_user_post(post2)
-
-                G.add_edge(post1id, post2id)
-
-                add_replies(post2)
-            # if post.is_boost:
-            #     post2 = post.in_boost_of
-            #     post1id = ensure_post_node(post)
-            #     post2id = add_user_post(post2)
-            #     # post2id = ensure_post_node(post2)
-            #     G.add_edge(post1id, post2id)
-
-        # build
         for post in self.posts:
-            add_user_post(post)
+            ensure_node(post)
+            if post.in_reply_to:
+                ensure_node(post.in_reply_to)
+                ensure_edge(post, post.in_reply_to, rel='replied_to')
+            # for post_reply in post.replies:
+                # reply = Post(reply)
 
         
-        return G
+        return g
 
+
+    @property
+    def g(self): return self.graph()
         
     def to_adjmat(self, g=None):
         if not g: g = self.graph()
@@ -177,3 +121,112 @@ class PostNet:
         nt.from_nx(g)
         return nt.show('nx.html')
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # def graph_old(self):
+    #     # start graph
+    #     G=nx.DiGraph()
+    #     # funcs
+    #     node2int = {}
+    #     int2node = {}
+    #     def ensure_post_node(post):
+    #         post_name = str(post)
+    #         post_id = node2int.get(post_name)
+    #         if post_id is None: post_id = G.order()+1
+
+    #         if not G.has_node(post_id):    
+    #             node2int[post_name]=post_id
+    #             G.add_node(
+    #                 post_id,
+    #                 name=post_name,
+    #                 node_type='post',
+    #                 label=post.text[:50],
+    #                 text=post.text,
+    #                 url=post.url_local,
+    #                 obj=post
+    #             )
+    #         return post_id
+
+    #     def ensure_user_node(user):
+    #         user_name = str(user)
+    #         user_id = node2int.get(user_name)
+    #         if user_id is None: user_id = G.order()+1
+    #         if not G.has_node(user_id):
+    #             node2int[user_name]=user_id
+
+    #             G.add_node(
+    #                 user_id,
+    #                 name=user_name,
+    #                 node_type='user',
+    #                 label = user.display_name,
+    #                 text = user.display_name,
+    #                 obj = user,
+    #                 url = user.url_local
+    #             )
+    #         return user_id
+        
+    #     def add_user_post(post):
+    #         user = post.author
+    #         uid=ensure_user_node(user)
+
+    #         if post.is_boost:
+    #             uid2=ensure_user_node(post.in_boost_of.author)
+    #             pid=ensure_post_node(post.in_boost_of)
+    #             if not G.has_edge(uid,uid2): G.add_edge(uid,uid2)
+    #             if not G.has_edge(uid2,pid): G.add_edge(uid2,pid)
+    #         else:
+    #             pid=ensure_post_node(post)
+    #             if not G.has_edge(uid,pid): G.add_edge(uid,pid)
+
+    #         add_replies(post)
+    #         return pid
+
+    #     def add_replies(post):
+    #         if post.is_reply:
+    #             post2 = post.in_reply_to
+                
+    #             post1id = ensure_post_node(post)
+    #             post2id = ensure_post_node(post2)
+    #             # post2id = add_user_post(post2)
+
+    #             G.add_edge(post1id, post2id)
+
+    #             add_replies(post2)
+    #         # if post.is_boost:
+    #         #     post2 = post.in_boost_of
+    #         #     post1id = ensure_post_node(post)
+    #         #     post2id = add_user_post(post2)
+    #         #     # post2id = ensure_post_node(post2)
+    #         #     G.add_edge(post1id, post2id)
+
+    #     # build
+    #     for post in self.posts:
+    #         add_user_post(post)
+
+        
+    #     return G

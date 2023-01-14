@@ -1,14 +1,24 @@
 from .imports import *
+from .postlist import PostList
+from .htmlfmt import to_html
 
+in_reply_to_uri_key = 'in_reply_to__id'
 
-def Post(url, **post_d):
-    tron=get_tron()
-    return tron.post(url, **post_d)
+def Post(url_or_uri_x, **post_d):
+    from mastotron import Tron
+    return Tron().post(url_or_uri_x, **post_d)
 
 class PostModel(DictModel):
     def __init__(self,*x,**y):
         super().__init__(*x,**y)
-        self.save()
+        # self.save()
+
+    def __eq__(self, post):
+        return self._id == post._id
+
+    def __hash__(self):
+        return hash(self._id)
+
 
     @property
     def uri(self):
@@ -18,18 +28,31 @@ class PostModel(DictModel):
         return bool(self.uri)
 
     @property
+    def server(self):
+        return parse_account_name(self.url)[-1]
+    @property
+    def un(self):
+        return parse_account_name(self.url)[-1]
+
+    def api(self):
+        from mastotron import Tron
+        return Tron().api_server(self.server)
+    
+
+    @property
     def author(self):
         from .poster import Poster
         return Poster(self.account)
 
     # def get_url_local(self, server):
         # return '/'.join([server,'@'+self.acct])
-
-
     
     @property
     def timestamp(self):
-        return int(round(self.datetime.timestamp()))
+        return self._data.get(
+            'timestamp',
+            int(round(self.datetime.timestamp()))
+        )
 
     @cached_property
     def datetime(self):
@@ -46,86 +69,110 @@ class PostModel(DictModel):
     @cached_property
     def post_id(self):
         return os.path.join(self.poster_id, self.url.split('/')[-1])
+    
+    @cached_property
+    def status_id(self):
+        return self.url.split('/')[-1]
+
     @cached_property
     def poster_id(self):
         return self.author.account
         
     @cached_property
     def in_boost_of(self):
-        return PostModel(self.reblog) if self.reblog else None
+        if self.reblog:
+            url = self.reblog.get('url')
+            if url:
+                post = Post(url, **dict(self.reblog))
+                if post:
+                    return post
+
+
+    def wider_context(self): return self.get_context(recurse=True)
+    def immediate_context(self): return self.get_context(recurse=False)
+    convo = immediate_context
+
+    def get_posts_above(self, as_list=True):
+        pre,post=self.status_context
+        l=[Post(d.get('url'), **d) for d in pre]
+        return PostList(l) if not as_list else l
+    
+    def get_posts_below(self, as_list=True):
+        pre,post=self.status_context
+        l=[Post(d.get('url'), **d) for d in post]
+        return PostList(l) if not as_list else l
+    
+    @cached_property
+    def above(self):
+        return self.get_posts_above(as_list=False)
+    
+    @property
+    def below(self): 
+        return self.get_posts_below(as_list=False)
+
+    @property
+    def context(self): return self.get_context()
+
+    def get_context(self, as_list=False, recurse=1):
+        posts=self.get_posts_above() + self.get_posts_below()
+        if recurse>0:
+            if self.op != self and self.op not in set(posts):
+                posts.append(self.op)
+            
+            for post in [x for x in posts]:
+                posts.extend(post.get_context(recurse=recurse-1, as_list=True))
+        posts.append(self)
+        return PostList(posts) if not as_list else posts
+
+    @cached_property
+    def status_context(self):
+        from .mastotron import Tron
+        from .postlist import PostList
+
+        res = Tron().status_context(self._id)
+        if not res: return [], []
+
+        posts_pre=res.get('ancestors',[])
+        posts_post=res.get('descendants',[])
+
+        return posts_pre, posts_post
+
+    def get_context_d(self):
+        pre,post = self.status_context
+        return {
+            postd['id'] : postd
+            for postd in pre + post
+        }
+
 
     @cached_property
     def in_reply_to(self):
-        if self.in_reply_to_uri:
-            return Post(self.in_reply_to_uri)
-
-    @cached_property
-    def in_reply_to_uri(self, key = 'in_reply_to_uri'):
         if not self.in_reply_to_id: return
-        if not key in self._data:
-            oldurl = f'{os.path.dirname(self.url)}/{self.in_reply_to_id}'
-            newurl = requests.get(oldurl).url
-            self.store(key, newurl)
-        return self._data[key]
+
+        context_d = self.get_context_d()
+        if self.in_reply_to_id in context_d:
+            reply_d = context_d[self.in_reply_to_id]
+            return Post(reply_d['url'], **reply_d)
+        else:
+            if self.above:
+                return self.above[0]
 
     @property
-    def url_or_uri(self):
-        return self.url if self.url else self.uri
-    
-    def __repr__(self): return f"Post('{self.uri}')"
+    def replies(self):
+        return PostList(Post(idx) for idx in [*set(self._data.get('replies_uri',[]))])
+
+    @cached_property
+    def op(self):
+        if self.in_reply_to: return self.in_reply_to.op
+        return self
+                    
+    def __repr__(self): return f"Post('{self._id}')"
+    def _repr_html_(self): return self.html
 
     @property
     def html(self):
-        return self._repr_html_(allow_embedded=False)
-
-    def _repr_html_(self, allow_embedded = True): 
-        if self.is_boost:
-            o = f'''
-                <div class="post reblog">
-                    <p>
-                        {self.author._repr_html_()} reposted at {self.created_at.strftime("%m/%d/%Y at %H:%M:%S")}:
-                    </p>
-                    
-                    {self.in_boost_of._repr_html_()}
-                    <p>Post ID: <a href="{self.url}" target="_blank">{self.id}</a></p>
-
-                </div>
-            '''
-        else:
-            imgs_urls = [d.get('preview_url') for d in self.media_attachments] if self.media_attachments else []
-            imgs = [
-                f'<a href="{url}" target="_blank"><img src="{url}" /></a>'
-                for url in imgs_urls
-                if url
-            ]
-
-            o = f'''
-                <div class="post origpost">
-                    <p>
-                        {self.author._repr_html_()} posted on {self.datetime_str}:
-                    </p>
-                    
-                    {self.content}
-
-                    <center>{"    ".join(imgs)}</center>
-                    
-                    <p>
-                        {self.replies_count:,} 🗣
-                        |
-                        {self.reblogs_count:,} 🔁
-                        |
-                        {self.favourites_count:,} 💙
-                        |
-                        Post ID: <a href="{self.url}" target="_blank">{self.id}</a>
-                    </p>
-
-                    {"<p><i>... in reply to:</i></p> " + self.in_reply_to._repr_html_() + " <br/> " if allow_embedded and self.is_reply else ""}
-                </div>
-            '''
-            
-        return '\n'.join([ln.lstrip() for ln in o.split('\n')]).strip()
-
-    
+        
+        return post_to_html(self, allow_embedded=False)
     
     @property
     def num_reblogs(self):
@@ -159,36 +206,35 @@ class PostModel(DictModel):
         return self.in_reply_to_id is not None
 
 
+    @cached_property
     def scores(self):
         """
         These scoring ideas come from mastodon_digest (https://github.com/hodgesmr/mastodon_digest).
         """
-        if not self._scores:
-            scores={}
+        scores={}
 
-            # simple score
-            scores['Simple'] = gmean([
-                self.num_reblogs+1, 
-                self.num_likes+1,
-            ])
+        # simple score
+        scores['Simple'] = gmean([
+            self.num_reblogs+1, 
+            self.num_likes+1,
+        ])
 
-            # extended simple score
-            scores['ExtendedSimple'] = gmean([
-                self.num_reblogs+1, 
-                self.num_likes+1,
-                self.num_replies+1
-            ])
+        # extended simple score
+        scores['ExtendedSimple'] = gmean([
+            self.num_reblogs+1, 
+            self.num_likes+1,
+            self.num_replies+1
+        ])
 
-            # add weighted versions
-            for score_name in list(scores.keys()):
-                scores[score_name+'Weighted'] = scores[score_name] / sqrt(self.author.num_followers+1)
+        # add weighted versions
+        for score_name in list(scores.keys()):
+            scores[score_name+'Weighted'] = scores[score_name] / sqrt(self.author.num_followers+1)
 
-            scores['All'] = gmean(list(scores.values()))
-            self._scores = scores
-        return self._scores
+        scores['All'] = gmean(list(scores.values()))
+        return scores
 
     def score(self, score_type='All'):
-        return self.scores().get(score_type,np.nan)
+        return self.scores.get(score_type,np.nan)
 
     @property
     def text(self):
@@ -196,59 +242,31 @@ class PostModel(DictModel):
 
     @property
     def label(self, limsize=40):
+        # from unidecode import unidecode
+        import html
         stext = self.spoiler_text
         if not stext: stext=' '.join(w for w in self.text.split() if w and w[0]!='@')
-        return stext[:limsize]
-
-    @property
-    def db(self):
-        if not self._db: self._db = get_tron().db
-        return self._db
-    
-    @property
-    def cache(self):
-        if not self._cache: self._cache = get_tron().cache
-        return self._cache
-
-    def store(self, key, val):
-        self._data[key] = val
-        with self.cache as cache:
-            if not self.uri in cache: cache[self.uri] = {}
-            cache[self.uri] = {**cache[self.uri], **{key:val}}
-
-
-
-    def data_tosave(self):
-        return dict(
-            uri=self.uri,
-            poster_uri=self.author.uri,
-            # text=self.text,
-            # html=self.html,
-            is_boost=self.is_boost,
-            is_reply=self.is_reply,
-            in_boost_of_uri=self.in_boost_of.uri if self.in_boost_of else '',
-            in_reply_to_uri=self.in_reply_to_uri if self.in_reply_to else '',
-            timestamp=self.timestamp,
-            **{f'score_{k}':v for k,v in self.scores().items()}
-        )
+        return html.unescape(stext)[:limsize].strip()
 
     def save(self):
-        if self.is_valid() and not self._saved:
-            try:
-                self.db.upsert(self.data_tosave(), Query().uri == self.uri)
-                self._saved = True
-            except json.decoder.JSONDecodeError as e:
-                print(f'JSON error?: {e}')
-        return self
-        
-    def data_saved(self):
-        res=self.db.search(Query().uri == self.uri)
-        return res[0] if res else {}
+        data = self.data
+        from .db import TronDB
+        # log.debug(f'saving: {self}')
+        TronDB().set_post(data)
+
+    @cached_property
+    def data(self):
+        return {
+            **self._data,
+            **{'timestamp':self.timestamp},
+            **{f'score_{k}':v for k,v in self.scores.items()},
+            **{'_id':self._id},
+        }
 
     @cached_property
     def node_data(self):
         odx={}
-        odx['html'] = self._repr_html_(allow_embedded=False)
+        odx['html'] = to_html(self, allow_embedded=False)
         odx['shape']='box'
         odx['label']=self.label
         odx['text'] = self.text

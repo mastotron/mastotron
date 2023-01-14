@@ -1,14 +1,19 @@
 from .imports import *
 
-
 def Tron():
     return Mastotron()
 
+CACHES = {}
+APIS = {}
+
 class Mastotron():
     def __init__(self):
-        self._api = {}
+        global CACHES, API_SERVERS
+
+        self._api = APIS
         self._posts = {}
         self._seen_urls = set()
+        self._caches = CACHES
     
     def _get_path_api_auth(self, server):
         return os.path.join(
@@ -77,53 +82,107 @@ class Mastotron():
     def db(self): 
         return TinyDB(path_tinydb)
     
-    @cached_property
-    def cache(self):
-        return SqliteDict(path_db, autocommit=True)
+    def cache(self, dbname='cachedb'):
+        if not dbname in self._caches:
+            self._caches[dbname] = SqliteDict(path_db+'.'+dbname, autocommit=True)
+        return self._caches.get(dbname)
     
     def status(self, url):
         res = {}
-        with self.cache as cache:
-            if url in cache:
-                return cache[url]
-            else:
-                server_name = get_server_name(url)
-                status_id = get_status_id(url)
-                api = self.api_server(server_name)
+        cache = self.cache('status')
+        # with self.cache('status') as cache:
+        if url in cache:
+            # log.debug(f'getting {url} from cache')
+            return cache[url]
+        else:
+            server_name = get_server_name(url)
+            status_id = get_status_id(url)
+            api = self.api_server(server_name)
+            log.debug(f'getting {server_name}\'s {status_id} from API')
+            try:
+                res = api.status(status_id)
+                # except MastodonNotFoundError as e:
+                log.debug(f'got {url} from API')
                 try:
-                    res = api.status(status_id)
-                    # except MastodonNotFoundError as e:
-                    try:
-                        cache[url] = res
-                    except AttributeError:
-                        pass
-                except Exception as e:
-                    print(f'!! {e}: {url} !!')
-                    res = {}
-
+                    cache[url] = res
+                except AttributeError:
+                    pass
+            except Exception as e:
+                print(f'!! {e}: {url} !!')
+                res = {}
         return res
+
+    def get_uri(self, url_or_uri):
+        uri = url_or_uri
+        # with self.cache('url_to_uri') as cache:
+            # uri = cache.get(uri,uri)
+        uri = self.cache('url_to_uri').get(uri,uri)
+        uri = to_uri(uri)
+        return uri
+        
         
 
-    def post(self, url='', **post_d):
-        if not url: return
-        # print(f'post! url = {url}; keys = {post_d.keys()}')
-        if not url in self._posts:
-            post_d = self.status(url) if not post_d else post_d
-            self._posts[url] = PostModel({'url':url, **post_d}) if post_d else None
+    def post(self, url_or_uri, **post_d):
+        post = None
+
+        # ensure appropriate format
+        uri = self.get_uri(url_or_uri)
         
-        return self._posts[url]
+        # if cached
+        if uri in self._posts: return self._posts[uri]
+
+        # get from db?
+        db = TronDB()
+        post_from_db = db.get_post(uri)
+        if post_from_db: 
+            # log.debug(f'getting {uri} from trondb')
+            post = PostModel({**post_from_db, **post_d})
+
+        if not post:
+            # get from status?
+            if not post_d: # ok to trust custom dicts ?
+                post_d = self.status(uri)
             
+            if post_d: 
+                uri2 = post_d.get('url')
+                if uri != uri2:
+                    cache=self.cache('url_to_uri')
+                    cache[uri] = uri2
+                    uri = uri2
+
+                # log.debug('saving post_d into trondb')
+                post = PostModel({**post_d, '_id':uri})
+                db.set_post(post.data)
+
+        if post:
+            self._posts[uri] = post
+
+        return post
+            
+
+    def status_context(self, uri):
+        # with self.cache('context') as cache:
+        cache = self.cache('context')
+        if not uri in cache:
+            server,uname,status_id = get_server_account_status_id(uri)
+            try:
+                cache[uri] = self.api_server(server).status_context(status_id)
+            except Exception as e:
+                log.error(e)
+                return {}
+                
+        return cache[uri]
+
     
-    def latest(self, mins_ago=60):
+    def latest(self, **kwargs):
+        return PostList(list(self.latest_iter(**kwargs)))
+
+    def latest_iter(self, mins_ago=60):
         now = int(round(datetime.now().timestamp()))
         then = now - (mins_ago * 60)
-
-        res = self.db.search(
-            Query().timestamp.test(
-                lambda timestamp: type(timestamp) is int and timestamp>=then
-            )
-        )
-        return PostList([self.post(row['uri']) for row in res])
+            
+        for post in TronDB().since(then):
+            yield PostModel(dict(post))
 
 
     def latest_n(self, n=10):
@@ -136,11 +195,11 @@ class Mastotron():
         seen_urls = self._seen_urls
         while timeline:
             for post_d in timeline:
-                if post_d.url not in seen_urls:
+                uri = to_uri(post_d.url if post_d.url else post_d.uri)
+                if uri and uri not in seen_urls:
                     seen_urls.add(post_d.url)
-                    post = self.post(**dict(post_d))
-                    if post:
-                        yield post
+                    post = self.post(uri, **dict(post_d))
+                    if post: yield post
             # keep going
             timeline = api.fetch_previous(timeline)
 

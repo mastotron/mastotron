@@ -40,8 +40,14 @@ def get_status_id(url):
         if x and x.isdigit():
             return int(x)
 
+def get_account_name(x): return parse_account_name(x)[0]
 
-
+def get_server_account_status_id(x):
+    return (
+        get_server_name(x),
+        get_account_name(x),
+        get_status_id(x)
+    )
 
 TRON=None
 def get_tron():
@@ -61,3 +67,14 @@ class DictModel:
         except AttributeError:
             return self._data.get(name)
 
+def to_uri(url): 
+    if url.count('@')>=2:
+        return url
+    else:
+        url = url.replace('/users/','/@').replace('/statuses/','/')
+        un,server = parse_account_name(url)
+        status_ids = [y for y in url.split('/') if y.isdigit()]
+        if status_ids:
+            status_id = status_ids[0]
+            return f'https://{server}/@{un}/{status_id}'
+        return ''

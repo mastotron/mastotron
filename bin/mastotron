@@ -22,11 +22,15 @@ def main():
     if args_d.get('web'):
         os.system(f'cd {path_web} && python app.py')
     elif args_d.get('code'):
-        os.system(f'cd {path_code} && ipython -c "import mastotron as tron" -i')
+        imp='from mastotron import *'
+        cmd = ' && '.join([
+            f'cd {path_code}',
+            f'''ipython -c "{imp}; print('>>> {imp}')" -i'''
+        ])
+        os.system(cmd)
     else:
         os.system(f'cd {path_gui} && npm start')
 
-    print(vars(args))
 
 ### RUN
 if __name__ == '__main__': main()
