@@ -11,12 +11,12 @@ document.addEventListener('DOMContentLoaded', function () {
     let interval_request = 3 * 1000 //sec
     function keep_alive_server() {
         getRequest(url + route)
-            .then(data => console.log(data))
+            // .then(data => console.log(data))
     }
     // setInterval(function() {
     //     keep_alive_server();
     //   }, interval_request);
-    setInterval(keep_alive_server, interval_request)()
+    // setInterval(keep_alive_server, interval_request); //()
 })
 
 
@@ -24,8 +24,6 @@ var socket = io();
 socket.on('connect', function() {
     socket.emit('my_event', {data: 'I\'m connected!'});
     console.log('connected!');
-
-    startnet();
 });
 
 
@@ -50,5 +48,5 @@ function logmsg(x) {
 $(document).ready(function(){
     setTimeout(function() {
         $('#flash').fadeOut('slow');
-    }, 3000); // <-- time in milliseconds
+    }, 2000); // <-- time in milliseconds
 });

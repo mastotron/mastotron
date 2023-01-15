@@ -11,3 +11,4 @@ IPython
 flask_restful
 flask_cors
 pyinstaller
+networkdisk
