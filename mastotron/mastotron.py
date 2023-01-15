@@ -116,7 +116,8 @@ class Mastotron():
         uri = url_or_uri
         # with self.cache('url_to_uri') as cache:
             # uri = cache.get(uri,uri)
-        uri = self.cache('url_to_uri').get(uri,uri)
+        uri2 = self.cache('url_to_uri').get(uri)
+        uri = uri2 if uri2 else uri
         uri = to_uri(uri)
         return uri
         
@@ -127,6 +128,7 @@ class Mastotron():
 
         # ensure appropriate format
         uri = self.get_uri(url_or_uri)
+        if not uri: return
         
         # if cached
         if uri in self._posts: return self._posts[uri]
@@ -145,7 +147,7 @@ class Mastotron():
             
             if post_d: 
                 uri2 = post_d.get('url')
-                if uri != uri2:
+                if uri != uri2 and uri2:
                     cache=self.cache('url_to_uri')
                     cache[uri] = uri2
                     uri = uri2
@@ -177,19 +179,22 @@ class Mastotron():
     def latest(self, **kwargs):
         return PostList(list(self.latest_iter(**kwargs)))
 
-    def latest_iter(self, mins_ago=60):
+    def latest_iter(self, mins_ago=60, unread=True):
         now = int(round(datetime.now().timestamp()))
         then = now - (mins_ago * 60)
-            
-        for post in TronDB().since(then):
-            yield PostModel(dict(post))
+        
+        func=TronDB().since if not unread else TronDB().since_unread
+        for post in func(then):
+            post = PostModel(dict(post))
+            if post.is_valid:
+                yield post
 
 
     def latest_n(self, n=10):
         uris = [row['uri'] for row in self.db.all()[-n:]]
         return PostList([self.post(uri) for uri in uris])
     
-    def timeline_iter(self, account_name, timeline_type='home'):
+    def timeline_iter(self, account_name, timeline_type='local'):
         api = self.api_user(account_name)
         timeline = api.timeline(timeline=timeline_type)
         seen_urls = self._seen_urls
@@ -197,7 +202,7 @@ class Mastotron():
             for post_d in timeline:
                 uri = to_uri(post_d.url if post_d.url else post_d.uri)
                 if uri and uri not in seen_urls:
-                    seen_urls.add(post_d.url)
+                    seen_urls.add(uri)
                     post = self.post(uri, **dict(post_d))
                     if post: yield post
             # keep going

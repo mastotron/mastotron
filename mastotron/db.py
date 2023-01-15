@@ -23,6 +23,7 @@ class PostDB(Document): pass
 class PosterDB(Document): pass
 
 dbconn = None
+gdb = None
 
 class TronDB:
     @property
@@ -56,3 +57,37 @@ class TronDB:
             PostDB,
             {'timestamp' : {'$gte' : timestamp}}
         )
+    
+    def since_unread(self, timestamp):
+        return self.conn.filter(
+            PostDB,
+            {
+                'timestamp' : {'$gte' : timestamp},
+                'is_read' : {'$ne' : True},
+            }
+        )
+
+    @property
+    def gdb(self):
+        global gdb
+        if gdb is None:
+            from cog.torque import Graph
+            gdb = Graph(
+                'cogdb', 
+                cog_home=os.path.basename(path_cogdb), 
+                cog_path_prefix=os.path.dirname(path_cogdb)
+            )
+        return gdb
+    
+    def relate(self, obj1, obj2, rel):
+        self.gdb.put(obj1._id,rel,obj2._id)
+
+    def get_relatives(self, obj, rel):
+        return [
+            d.get('id')
+            for d in self.gdb.v(obj._id).out(rel).all().get('result')
+        ]
+
+    def get_relative(self, obj, rel):
+        el = self.get_relatives(obj, rel)
+        return el[0] if el else None

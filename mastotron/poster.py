@@ -11,6 +11,7 @@ class Poster(DictModel):
     @property
     def uri(self): return self.url
 
+    @property
     def is_valid(self):
         return bool(self.uri)
 
@@ -50,7 +51,7 @@ class Poster(DictModel):
     def text(self): return unhtml(self.note).strip() if self.note else ''
 
     def _repr_html_(self, allow_embedded=False, **kwargs):
-        return f'<div class="author"><img src="{self.avatar}" width="50" height="50" /> <a href="{self.url}" target="_blank">{self.display_name}</a> ({self.followers_count:,} 👥){self.note if allow_embedded else ""}</div>'
+        return f'<span class="author"><img src="{self.avatar}" width="50" height="50" /> <a href="{self.url}" target="_blank">{self.display_name}</a> ({self.followers_count:,} 👥){self.note if allow_embedded else ""}</span>'
 
     @property
     def num_followers(self):

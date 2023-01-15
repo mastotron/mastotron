@@ -1,6 +1,7 @@
 from .imports import *
 from .postlist import PostList
 from .htmlfmt import to_html
+from .db import TronDB
 
 in_reply_to_uri_key = 'in_reply_to__id'
 
@@ -8,6 +9,8 @@ def Post(url_or_uri_x, **post_d):
     from mastotron import Tron
     return Tron().post(url_or_uri_x, **post_d)
 
+
+@total_ordering
 class PostModel(DictModel):
     def __init__(self,*x,**y):
         super().__init__(*x,**y)
@@ -19,13 +22,17 @@ class PostModel(DictModel):
     def __hash__(self):
         return hash(self._id)
 
+    def __gt__(self, other):
+        return self.timestamp > other.timestamp
+
 
     @property
     def uri(self):
         return self._data.get('url')
 
+    @property
     def is_valid(self):
-        return bool(self.uri)
+        return bool(self._id)
 
     @property
     def server(self):
@@ -92,36 +99,76 @@ class PostModel(DictModel):
     def immediate_context(self): return self.get_context(recurse=False)
     convo = immediate_context
 
+    def _get_posts_abovebelow(self, pre=True, as_list=True):
+        try:
+            _pre,_post=self.status_context
+            l=[Post(d.get('url'), **d) for d in (_pre if pre else _post)]
+        except Exception as e:
+            log.error(e)
+            l=[]
+        return PostList(l) if not as_list else l
+
+    @cache
     def get_posts_above(self, as_list=True):
-        pre,post=self.status_context
-        l=[Post(d.get('url'), **d) for d in pre]
-        return PostList(l) if not as_list else l
-    
+        return self._get_posts_abovebelow(pre=True, as_list=as_list)
+    @cache
     def get_posts_below(self, as_list=True):
-        pre,post=self.status_context
-        l=[Post(d.get('url'), **d) for d in post]
-        return PostList(l) if not as_list else l
+        return self._get_posts_abovebelow(pre=False, as_list=as_list)
     
     @cached_property
     def above(self):
         return self.get_posts_above(as_list=False)
     
-    @property
+    @cached_property
     def below(self): 
         return self.get_posts_below(as_list=False)
 
-    @property
-    def context(self): return self.get_context()
+    @cached_property
+    def context(self):
+        return self.get_context(
+            as_list=False,
+            recurse=1,
+            interrelate=True,
+            progress=True
+        )
+    
+    @cached_property
+    def thread(self):
+        return self.get_context(
+            as_list=False,
+            recurse=0,
+            interrelate=True,
+            progress=False
+        )
+    
+    
 
-    def get_context(self, as_list=False, recurse=1):
-        posts=self.get_posts_above() + self.get_posts_below()
-        if recurse>0:
-            if self.op != self and self.op not in set(posts):
-                posts.append(self.op)
+    
+    @cache
+    def get_context_op(self):
+        return self.op.get_context() if self.op != self else []
+
+
+    def iter_context(self, recurse=0, progress=False, **kwargs):
+        done=set()
+        posts=set(self.get_posts_above() + [self] + self.get_posts_below())
+        iterr=posts
+        if progress: iterr=tqdm(iterr, desc='Iterating context')
+        for post in iterr:
+            if post not in done:
+                done.add(post)
+                yield post
             
-            for post in [x for x in posts]:
-                posts.extend(post.get_context(recurse=recurse-1, as_list=True))
-        posts.append(self)
+            if recurse and post!=self:
+                for post2 in post.iter_context(recurse=recurse-1, progress=False, **kwargs):
+                    if post2 not in done:
+                        done.add(post2)
+                        yield post2
+        
+
+    def get_context(self, as_list=True, recurse=0, interrelate=False, progress=False):
+        posts=list(self.iter_context(recurse=recurse, progress=False))
+        if interrelate: self.interrelate(posts=posts)
         return PostList(posts) if not as_list else posts
 
     @cached_property
@@ -137,25 +184,76 @@ class PostModel(DictModel):
 
         return posts_pre, posts_post
 
-    def get_context_d(self):
-        pre,post = self.status_context
-        return {
-            postd['id'] : postd
-            for postd in pre + post
-        }
+    @cache
+    def get_context_d(self, recurse=0):
+        posts = self.get_context(recurse=recurse, as_list=True, interrelate=False)
+        return dict((post._id, post) for post in posts)
+
+    def interrelate(self, 
+            posts = None, 
+            recurse=0, 
+            force=False, 
+            progress=False, 
+            **kwargs):
+        
+        if force or not self._related:
+            if not posts: 
+                posts = self.get_context(
+                    recurse=recurse, 
+                    interrelate=False
+                )
+            
+            iterr = posts if not progress else tqdm(
+                posts,
+                desc='Relating context'
+            )
+            for post in iterr: 
+                post.get_in_reply_to(force=force)
+            
+            self._related=True
+    
+    def boot(self, recurse=0, **kwargs):
+        self.interrelate(recurse=recurse, **kwargs)
+        return self
 
 
-    @cached_property
+    @property
     def in_reply_to(self):
-        if not self.in_reply_to_id: return
+        return self.get_in_reply_to(force=False)
+    
 
+    def get_in_reply_to(self, force=False, save=True):
+        if not self.is_reply: return
+
+        if not force:    
+            reply_id_from_db = self._get_in_reply_to_id_from_gdb()
+            if reply_id_from_db: return Post(reply_id_from_db)
+
+        post = self._get_in_reply_to_from_context()
+        if post and save: self._set_in_reply_to_id_in_gdb(post)
+        
+        return post
+
+
+
+    def _get_in_reply_to_id_from_gdb(self):
+        log.debug('_get_in_reply_to_id_from_gdb')
+        return TronDB().get_relative(self, 'in_reply_to')
+    def _set_in_reply_to_id_in_gdb(self, post):
+        log.debug('_set_in_reply_to_id_in_gdb')
+        return TronDB().relate(self, post, 'in_reply_to')
+    
+    def _get_in_reply_to_from_context(self):
+        log.debug('_get_in_reply_to_from_context')
         context_d = self.get_context_d()
-        if self.in_reply_to_id in context_d:
-            reply_d = context_d[self.in_reply_to_id]
-            return Post(reply_d['url'], **reply_d)
-        else:
-            if self.above:
-                return self.above[0]
+        post = context_d.get(self.in_reply_to_id)
+        if not post:
+            above = self.get_posts_above(as_list=True)
+            if above:
+                post = above[-1]
+        return post
+    
+
 
     @property
     def replies(self):
@@ -169,10 +267,9 @@ class PostModel(DictModel):
     def __repr__(self): return f"Post('{self._id}')"
     def _repr_html_(self): return self.html
 
-    @property
-    def html(self):
-        
-        return post_to_html(self, allow_embedded=False)
+    def get_html(self, allow_embedded=False):        
+        from .htmlfmt import post_to_html
+        return post_to_html(self, allow_embedded=allow_embedded)
     
     @property
     def num_reblogs(self):
@@ -241,22 +338,41 @@ class PostModel(DictModel):
         return unhtml(self.content).strip()
 
     @property
-    def label(self, limsize=40):
-        # from unidecode import unidecode
+    def label(self): return self.get_label()
+
+    def get_label(self, limsize=40):
         import html
         stext = self.spoiler_text
         if not stext: stext=' '.join(w for w in self.text.split() if w and w[0]!='@')
         return html.unescape(stext)[:limsize].strip()
 
     def save(self):
-        data = self.data
+        # data = {str(k):str(v) for k,v in self.data.items()}
         from .db import TronDB
         # log.debug(f'saving: {self}')
-        TronDB().set_post(data)
+        TronDB().set_post(self.data)
+        # TronDB().gdb.updatej(data)
+
+    def mark_read(self):
+        self._data['is_read']=True
+        self.save()
+    def mark_unread(self):
+        self._data['is_read']=False
+        self.save()
+    
+    @property
+    def is_read(self):
+        return self._data.get('is_read', False)
+    
+    
+    @property
+    def data_default(self):
+        return {'_id':self._id, 'is_read':False}
 
     @cached_property
     def data(self):
         return {
+            **self.data_default,
             **self._data,
             **{'timestamp':self.timestamp},
             **{f'score_{k}':v for k,v in self.scores.items()},

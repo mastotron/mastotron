@@ -7,16 +7,16 @@ def to_html(x, **y):
     else:
         return ''
 
+#                 <p>Post ID: <a href="{self._id}" target="_blank">{self.id}</a></p>
 def post_to_html(self, allow_embedded = True, **y): 
     if self.is_boost:
         o = f'''
             <div class="post reblog">
                 <p>
-                    {self.author._repr_html_()} reposted at {self.created_at.strftime("%m/%d/%Y at %H:%M:%S")}:
+                    {self.author._repr_html_()} reposted at {self.datetime.strftime("%m/%d/%Y at %H:%M:%S")}:
                 </p>
                 
-                {self.in_boost_of._repr_html_()}
-                <p>Post ID: <a href="{self.url}" target="_blank">{self.id}</a></p>
+                {post_to_html(self.in_boost_of) if allow_embedded and self.in_boost_of else ""}
 
             </div>
         '''
@@ -31,7 +31,7 @@ def post_to_html(self, allow_embedded = True, **y):
         o = f'''
             <div class="post origpost">
                 <p>
-                    {self.author._repr_html_()} posted on {self.datetime_str}:
+                    <a href="{self.author._id}">{self.author._repr_html_()}</a> posted on <a href="{self._id}">{self.datetime_str}</a>:
                 </p>
                 
                 {self.content}
@@ -44,8 +44,6 @@ def post_to_html(self, allow_embedded = True, **y):
                     {self.reblogs_count:,} 🔁
                     |
                     {self.favourites_count:,} 💙
-                    |
-                    Post ID: <a href="{self.url}" target="_blank">{self.id}</a>
                 </p>
 
                 {"<p><i>... in reply to:</i></p> " + self.in_reply_to._repr_html_() + " <br/> " if allow_embedded and self.is_reply else ""}

@@ -1,5 +1,6 @@
 import os,sys; sys.path.insert(0,'..')
-from functools import cached_property
+from functools import cached_property, lru_cache, total_ordering
+cache = lru_cache(maxsize=None)
 from typing import Optional,Union,Dict,List
 from sqlmodel import Field, Session, SQLModel, create_engine, select, Relationship
 import numpy as np
@@ -42,6 +43,7 @@ path_env = os.path.join(path_data, 'config.json')
 path_db = os.path.join(path_data, 'db.sqlitedict')
 path_tinydb = os.path.join(path_data, 'db.tinydb')
 path_blitzdb = os.path.join(path_data, 'db.blitzdb')
+path_cogdb = os.path.join(path_data, 'db.codgb')
 app_name = 'mastotron'
 API = None
 

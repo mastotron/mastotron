@@ -68,6 +68,7 @@ class DictModel:
             return self._data.get(name)
 
 def to_uri(url): 
+    if not url: return ''
     if url.count('@')>=2:
         return url
     else:
@@ -78,3 +79,13 @@ def to_uri(url):
             status_id = status_ids[0]
             return f'https://{server}/@{un}/{status_id}'
         return ''
+
+def encodeURIComponent(x):
+    from urllib.parse import quote
+    return quote(x, safe="!~*'()")
+
+
+def test_encodeURIComponent():
+    inp='''<svg xmlns="http://www.w3.org/2000/svg" width="390" height="65"><rect x="0" y="0" width="100%" height="100%" fill="#7890A7" stroke-width="20" stroke="#ffffff" ></rect><foreignObject x="15" y="10" width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="font-size:40px"> <em>I</em> am<span style="color:white; text-shadow:0 0 20px #000000;"> HTML in SVG!</span></div></foreignObject></svg>'''
+    out='''%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22390%22%20height%3D%2265%22%3E%3Crect%20x%3D%220%22%20y%3D%220%22%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%237890A7%22%20stroke-width%3D%2220%22%20stroke%3D%22%23ffffff%22%20%3E%3C%2Frect%3E%3CforeignObject%20x%3D%2215%22%20y%3D%2210%22%20width%3D%22100%25%22%20height%3D%22100%25%22%3E%3Cdiv%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F1999%2Fxhtml%22%20style%3D%22font-size%3A40px%22%3E%20%3Cem%3EI%3C%2Fem%3E%20am%3Cspan%20style%3D%22color%3Awhite%3B%20text-shadow%3A0%200%2020px%20%23000000%3B%22%3E%20HTML%20in%20SVG!%3C%2Fspan%3E%3C%2Fdiv%3E%3C%2FforeignObject%3E%3C%2Fsvg%3E'''
+    assert encodeURIComponent(inp) == out

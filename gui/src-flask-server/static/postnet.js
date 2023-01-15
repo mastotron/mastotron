@@ -14,14 +14,14 @@ var options = {
     arrows: {
       to: {
         enabled: true,
-        scaleFactor: .4,
+        scaleFactor: .8,
       }
     }
   },
 
   nodes: {
     borderWidth: 1,
-    size: 30,
+    size: 20,
     color: {
       border: "#222222",
       // background: "#666666",
@@ -37,10 +37,26 @@ var options = {
 
 var network = new vis.Network(container,data, options);
 
+var svg_str =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="390" height="65">' +
+  '<rect x="0" y="0" width="100%" height="100%" fill="#7890A7" stroke-width="20" stroke="#ffffff" ></rect>' +
+  '<foreignObject x="15" y="10" width="100%" height="100%">' +
+  '<div xmlns="http://www.w3.org/1999/xhtml" style="font-size:40px">' +
+  " <em>I</em> am" +
+  '<span style="color:white; text-shadow:0 0 20px #000000;">' +
+  " HTML in SVG!</span>" +
+  "</div>" +
+  "</foreignObject>" +
+  "</svg>";
+
+var svg_url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg_str);
+
+console.log(svg_str);
+console.log(svg_url);
 
 // functions
 function getdownstreamnodes(node) {
-  nodes_downstream = network.getConnectedNodes(node, 'to');
+  nodes_downstream = network.getConnectedNodes(node, 'from');
 
   for (node2 of nodes_downstream) {
     nodes2_downstream = getdownstreamnodes(node2); //network.getConnectedNodes(node2);
@@ -53,6 +69,11 @@ function getdownstreamnodes(node) {
 function del_nodes(node) {
   nlx = getdownstreamnodes(node);
   nlx.forEach(function(nx) { nodes.remove(nx); });
+  socket.emit('mark_as_read', nlx);
+}
+
+function add_context(node) {
+  socket.emit('add_context', node.id)
 }
 
 function add_node() {
@@ -84,7 +105,7 @@ function get_node(params) {
 
 
 // SHOW
-network.on("hoverNode", function (params) {
+function shownode(params) {
   node_d = get_node(params);
   console.log('node = ', node_d);
 
@@ -96,16 +117,21 @@ network.on("hoverNode", function (params) {
     { top: params.event.y + offset, 
       left: params.event.x + offset
     });
-  
-  // }
+}
+
+network.on("hoverNode", function (params) {
+  shownode(params);
 });
 
 
 
 network.on("click", function (params) {
-  node = this.getNodeAt(params.pointer.DOM);
-  if (node == undefined) {
+  node_d = get_node(params);
+  if (node_d == undefined) {
     $('#tweet').hide();
+  } else {
+    shownode(params);
+    // window.open(node_d.id, '_blank');
   }
 });
 
@@ -115,7 +141,8 @@ network.on("doubleClick", function (params) {
   node_d = get_node(params);
   if (node_d != undefined) {
     del_nodes(node_d.id);
-    // window.open(node_d.url, '_blank');
+    // add_context(node_d);
+    // window.open(node_d.id, '_blank');
   } else {
     update_nodes();
   }
@@ -127,7 +154,8 @@ network.on("oncontext", function (params) {
   console.log(params);
   node_d = get_node(params);
   if (node_d != undefined) {
-    del_nodes(node_d.id);
+    // del_nodes(node_d.id);
+    window.open(node_d.id, '_blank');
   }
 });
 
@@ -158,10 +186,10 @@ $(document).ready(function(){
   startnet();
 
   // setTimeout(function() { update_nodes(); }, 1000);
-  // socket.emit('start_updates');
+  socket.emit('start_updates');
   
-  // setInterval(function() { socket.emit('get_pushes'); }, 1 * 1000);
-  // setInterval(function() { socket.emit('get_updates'); }, 30 * 1000);
+  setInterval(function() { socket.emit('get_pushes'); }, 1 * 1000);
+  setInterval(function() { socket.emit('get_updates'); }, 30 * 1000);
 
 
   // var handle = $( "#custom-handle" );
