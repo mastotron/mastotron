@@ -13,10 +13,7 @@ document.addEventListener('DOMContentLoaded', function () {
         getRequest(url + route)
             // .then(data => console.log(data))
     }
-    // setInterval(function() {
-    //     keep_alive_server();
-    //   }, interval_request);
-    // setInterval(keep_alive_server, interval_request); //()
+    setInterval(keep_alive_server, interval_request);
 })
 
 
@@ -49,4 +46,4 @@ $(document).ready(function(){
     setTimeout(function() {
         $('#flash').fadeOut('slow');
     }, 2000); // <-- time in milliseconds
-});
+})

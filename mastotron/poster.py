@@ -39,10 +39,10 @@ class Poster(DictModel):
         return hash(self.acct)
     
     def __eq__(self, other):
-        return self.acct == other.acct
+        return self._id == other._id
 
     def __repr__(self):
-        return f'Poster({self.account})'
+        return f'Poster({self._id})'
 
     @cached_property
     def html(self): return self._repr_html_(allow_embedded=True)
@@ -51,7 +51,7 @@ class Poster(DictModel):
     def text(self): return unhtml(self.note).strip() if self.note else ''
 
     def _repr_html_(self, allow_embedded=False, **kwargs):
-        return f'<span class="author"><img src="{self.avatar}" width="50" height="50" /> <a href="{self.url}" target="_blank">{self.display_name}</a> ({self.followers_count:,} 👥){self.note if allow_embedded else ""}</span>'
+        return f'<span class="author"><img src="{self.avatar}" width="50" height="50" /> <a href="{self._id}" target="_blank">{self.display_name}</a> ({self.followers_count:,} 👥){self.note if allow_embedded else ""}</span>'
 
     @property
     def num_followers(self):

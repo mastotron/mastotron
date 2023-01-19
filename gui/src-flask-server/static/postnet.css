@@ -1,23 +1,38 @@
 body {
 font: 10pt arial;
-color: white;
+color: black;
+/* background-color: white;  */
+background-color: #eeeeee;
 /* background-color: black;  */
 /* background-color: #041e2e; */
-background-color: #010b12;
- 
+/* background-color: #010b12; */
 }
+div { margin: 0; padding: 0; }
+  
+.light-mode {
+    
+    color: black;
+}
+.dark-mode {
+    background-color: #010b12;
+    color: white;
+}
+
 a { color: lightblue; }
 #header {
     position:absolute;
     top:5px;
     right:5px;
+    vertical-align: middle;
+    font-size: 12pt;
     /* letter-spacing: .5em; */
-    color: gray;
+    /* color: gray; */
 }
 #logmsg {
 font: 10pt arial;
 }
-#mynetwork {
+
+#postnetviz {
 height: 95vh; /* For 100% screen height */
 width:  95vw; /* For 100% screen width */
 
@@ -31,34 +46,70 @@ width:  95vw; /* For 100% screen width */
 position: absolute;
 top: 10px;
 left: 10px;
-width:400px;
-padding: .5em;
-background-color: #041e2e;
+/* min-width:300px; */
+/* max-width: 400px; */
+width: 350px;
+padding: 0;
+margin: 0;
+background-color: white;
+border-radius: 25px;
+/* color: black; */
 border: 1px solid #888888;
-font-size:1.25em;
-/* backdrop-filter: blur(1px); */
+/* font-size:1.25em; */
+backdrop-filter: blur(3px);
+overflow: hidden;
+/* white-space: nowrap; */
+text-overflow: ellipsis;
+
+}
+#optbuttons {
+    text-align:right;
 }
 input {
-background-color: #041e2e; 
-color: gray;
+background-color: #eeeeee; 
+/* color: gray; */
 border: 0px;
 text-align: left;
 }
-#tweet img {
-width: 350px;
-/* opacity:0.5; */
+.post_postimg { width: 350px; }
+.post_avatarimg { 
+    height: 50px; 
+    width: 50px; 
+    border-radius: 50%;
 }
-#tweet .author img { width:50px; }
 
-/* .reblog {
-border:1px dotted black;
+.reblog {
+/* border:1px dotted black; */
 }
 .origpost {
-border:1px solid black;
+/* border:1px solid black; */
 }
 .post {
-padding:0 1em;
-} */
+padding:1em;
+margin: 0;
+/* text-align: center; */
+/* border: 1px solid darkgray; */
+/* color: red; */
+font-size:14pt;
+}
+.post_uristr {
+    font-size:11pt;
+    margin:0 auto;
+}
+.post_header {
+    font-size:11pt;
+    margin: 0;
+    padding: 0;
+}
+.post_stats { 
+    font-size:10pt;
+    margin: 0;
+    padding: 0;
+    margin-top: .5em;
+    margin-bottom:.25em;
+    margin-left: .25em;
+}
+
 
 #config {
     position:absolute;
@@ -80,3 +131,4 @@ padding:0 1em;
     text-align: center;
     line-height: 1.6em;
   }
+  

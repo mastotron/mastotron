@@ -273,7 +273,7 @@ class PostModel(DictModel):
     
     @property
     def num_reblogs(self):
-        if self.is_boost and self.in_boost_of: 
+        if False: # self.is_boost and self.in_boost_of: 
             res = self.in_boost_of.num_reblogs
         else:
             res = self.reblogs_count
@@ -281,7 +281,7 @@ class PostModel(DictModel):
     
     @property
     def num_likes(self):
-        if self.is_boost and self.in_boost_of: 
+        if False: #self.is_boost and self.in_boost_of: 
             res = self.in_boost_of.num_likes
         else:
             res = self.favourites_count
@@ -289,7 +289,7 @@ class PostModel(DictModel):
     
     @property
     def num_replies(self):
-        if self.is_boost and self.in_boost_of: 
+        if False: #self.is_boost and self.in_boost_of: 
             res = self.in_boost_of.num_replies
         else:
             res = self.replies_count
@@ -302,6 +302,17 @@ class PostModel(DictModel):
     def is_reply(self):
         return self.in_reply_to_id is not None
 
+    @property
+    def datetime_str(self):
+        return self.datetime.strftime("%m/%d/%Y at %H:%M:%S")
+
+    @property
+    def datetime_str_h(self):
+        import human_readable as humr
+        return humr.date_time(
+            datetime.now().timestamp() - self.timestamp
+        )
+    
 
     @cached_property
     def scores(self):
@@ -330,7 +341,11 @@ class PostModel(DictModel):
         scores['All'] = gmean(list(scores.values()))
         return scores
 
-    def score(self, score_type='All'):
+    @property
+    def score(self):
+        return self.get_score()
+
+    def get_score(self, score_type='All'):
         return self.scores.get(score_type,np.nan)
 
     @property

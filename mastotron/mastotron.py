@@ -196,17 +196,28 @@ class Mastotron():
     
     def timeline_iter(self, account_name, timeline_type='local'):
         api = self.api_user(account_name)
-        timeline = api.timeline(timeline=timeline_type)
-        seen_urls = self._seen_urls
-        while timeline:
-            for post_d in timeline:
-                uri = to_uri(post_d.url if post_d.url else post_d.uri)
-                if uri and uri not in seen_urls:
-                    seen_urls.add(uri)
-                    post = self.post(uri, **dict(post_d))
-                    if post: yield post
-            # keep going
-            timeline = api.fetch_previous(timeline)
+        try:
+            timeline = api.timeline(timeline=timeline_type)
+            seen_urls = self._seen_urls
+            while timeline:
+                for post_d in timeline:
+                    uri = to_uri(post_d.url if post_d.url else post_d.uri)
+                    if uri and uri not in seen_urls:
+                        seen_urls.add(uri)
+                        post = self.post(uri, **dict(post_d))
+                        if post: yield post
+                # keep going
+                try:
+                    timeline = api.fetch_previous(timeline)
+                except MastodonNetworkError:
+                    api = self.api_user(account_name)
+                    try:
+                        timeline = api.fetch_previous(timeline)
+                    except MastodonNetworkError:
+                        timeline = None
+        except MastodonNetworkError:
+            pass
+                
 
 
     def timeline(self, account_name, n=10, **y):

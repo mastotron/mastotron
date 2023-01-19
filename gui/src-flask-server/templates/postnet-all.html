@@ -8,7 +8,7 @@
       body {
         font: 14pt arial;
       }
-      #mynetwork {
+      #postnetviz {
         width: 900px;
         height: 900px;
         /* border: 1px solid lightgray; */
@@ -47,7 +47,7 @@
         var edges = {{edges | tojson | safe}};
 
         // create a network
-        var container = document.getElementById("mynetwork");
+        var container = document.getElementById("postnetviz");
         var data = {
           nodes: nodes,
           edges: edges,
@@ -301,7 +301,7 @@
   </head>
 
   <body onload="draw()">
-    <div id="mynetwork"></div>
+    <div id="postnetviz"></div>
     <div id="tweet"></div>
   </body>
 </html>

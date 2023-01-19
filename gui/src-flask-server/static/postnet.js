@@ -1,5 +1,24 @@
 // vars
-var container = document.getElementById("mynetwork");
+var MODE = 'default';
+var SCORE_TYPE = 'ExtendedSimple';
+var darkbgcolor = 'rgb(20,20,23)'; //#28282B';
+var lightbgcolor = '#eeeeee';
+var lighttweetbg = 'white';
+var darktweetbg = 'rgba(30,30,33, 0.9)'; //#28282B';
+var darktxtcolor = 'white';
+var lighttxtcolor = 'black';
+var darkimg = "/static/dark-mode-6682-inv.png";
+var lightimg = "/static/dark-mode-6682.png";
+var limnodesgraph = 50;
+if (DARKMODE==1) { 
+  var txtcolor = darktxtcolor; 
+} else { 
+  var txtcolor = lighttxtcolor;  
+}
+
+
+// start containers
+var container = document.getElementById("postnetviz");
 var nodes = new vis.DataSet();
 var edges = new vis.DataSet();
 var data = { nodes: nodes, edges: edges};
@@ -10,11 +29,16 @@ var options = {
   },
 
   edges:{
-    color: "gray",
+    color: "silver",
     arrows: {
       to: {
         enabled: true,
-        scaleFactor: .8,
+        scaleFactor: .6,
+      },
+      middle: { enabled: false },
+      from: { 
+        enabled: false,
+        scaleFactor: .4,
       }
     }
   },
@@ -27,58 +51,31 @@ var options = {
       // background: "#666666",
       hover: "#777777"
     },
-    font: { color: "#eeeeee" },
+    font: { 
+      color: txtcolor
+    },
   },
 
   physics: {
     // wind: { x: 0, y: .25 }
-  }
+  },
 };
 
-var network = new vis.Network(container,data, options);
+var network = new vis.Network(container, data, options);
 
-var svg_str =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="390" height="65">' +
-  '<rect x="0" y="0" width="100%" height="100%" fill="#7890A7" stroke-width="20" stroke="#ffffff" ></rect>' +
-  '<foreignObject x="15" y="10" width="100%" height="100%">' +
-  '<div xmlns="http://www.w3.org/1999/xhtml" style="font-size:40px">' +
-  " <em>I</em> am" +
-  '<span style="color:white; text-shadow:0 0 20px #000000;">' +
-  " HTML in SVG!</span>" +
-  "</div>" +
-  "</foreignObject>" +
-  "</svg>";
+// FUNCTIONS
 
-var svg_url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg_str);
-
-console.log(svg_str);
-console.log(svg_url);
-
-// functions
-function getdownstreamnodes(node) {
-  nodes_downstream = network.getConnectedNodes(node, 'from');
-
-  for (node2 of nodes_downstream) {
-    nodes2_downstream = getdownstreamnodes(node2); //network.getConnectedNodes(node2);
-    nodes_downstream.push(...nodes2_downstream);
-  }
-  nodes_downstream.push(node);
-  return [...new Set(nodes_downstream)];
+function startnet() {
+  console.log('starting network!');
+  socket.emit('start_updates');
+  request_updates();
 }
 
-function del_nodes(node) {
-  nlx = getdownstreamnodes(node);
-  nlx.forEach(function(nx) { nodes.remove(nx); });
-  socket.emit('mark_as_read', nlx);
-}
+function iter_edges() { return Object.values(network.body.edges); }
+function iter_nodes() { return Object.values(network.body.nodes); }
 
-function add_context(node) {
-  socket.emit('add_context', node.id)
-}
 
-function add_node() {
-  nodes.update([{id:nodes.length+1, label:'Hello'}]);
-}
+// UI functions
 
 
 
@@ -94,7 +91,7 @@ function get_node(params) {
       return undefined;
     }
   }
-  console.log('node is',node);
+  // console.log('node is',node);
   if (node != undefined) {
     node_d = nodes.get(node);
     return node_d;
@@ -105,102 +102,337 @@ function get_node(params) {
 
 
 // SHOW
-function shownode(params) {
+function show_status_div(params) {
   node_d = get_node(params);
-  console.log('node = ', node_d);
-
-  $('#tweet').html(node_d['html']);
-  $('#tweet').show();
-  
-  offset = 20
+  node_pos = network.getPosition(node_d.id);
+  node_pos_web = network.canvasToDOM(node_pos);
+  _offset = 0;
+  $('#tweet').html(node_d['html']);  
+  x = node_pos_web['x'];
+  y = node_pos_web['y'];
   $('#tweet').offset(
-    { top: params.event.y + offset, 
-      left: params.event.x + offset
+    { top: y + _offset, 
+      left: x + _offset
     });
+  $('#tweet').show();
 }
 
-network.on("hoverNode", function (params) {
-  shownode(params);
-});
+function hide_status_div() { $('#tweet').hide(); }
+
+function nodes_to_ids(_nodes) {
+  _nodes_ids = [];
+  _nodes.forEach(function(_node) {
+    _nodes_ids.push(_node.id); 
+  })
+  return _nodes_ids;
+}
 
 
-
-network.on("click", function (params) {
-  node_d = get_node(params);
-  if (node_d == undefined) {
-    $('#tweet').hide();
-  } else {
-    shownode(params);
-    // window.open(node_d.id, '_blank');
+function getdownstreamnodes(node_id, recurse=2) {
+  nodes_downstream_ids = network.getConnectedNodes(
+    node_id,
+    direction=undefined
+  );
+  if (recurse > 0) {
+    for (node2 of nodes_downstream_ids) {
+      nodes_downstream_ids.push(
+        ...getdownstreamnodes(
+          node2,
+          recurse=recurse-1
+        )
+      );
+    }
   }
-});
+  nodes_downstream_ids.push(node_id);
+  return [...new Set(nodes_downstream_ids)];
+}
 
-network.on("doubleClick", function (params) {
-  $('#tweet').hide();
-  console.log(params);
-  node_d = get_node(params);
-  if (node_d != undefined) {
-    del_nodes(node_d.id);
-    // add_context(node_d);
-    // window.open(node_d.id, '_blank');
-  } else {
-    update_nodes();
-  }
-});
+function del_nodes(node_id) {
+  node_ids_to_del = getdownstreamnodes(node_id);
+  console.log('mark_as_read',node_ids_to_del);
+  socket.emit('mark_as_read', node_ids_to_del);
+  nodes.remove(node_ids_to_del);
+  size_nodes();
+}
 
-network.on("oncontext", function (params) {
-  $('#tweet').hide();
-  params.event.preventDefault();
-  console.log(params);
-  node_d = get_node(params);
-  if (node_d != undefined) {
-    // del_nodes(node_d.id);
-    window.open(node_d.id, '_blank');
-  }
-});
+function add_context(node_id) {
+  console.log('getting context for:',node_id);
+  socket.emit('add_context', node_id)
+}
 
 
 
 // socket events
 
 
-function update_nodes() {
-  console.log('update_nodes()');
-  logmsg('refreshing');
-  socket.emit('get_updates', {time:Date.now()})
-}
 
-socket.on('get_updates', function(data) {
-  console.log('get_updates', data);
+
+function update_nodes(data) {
+  lim = limnodesgraph;
   nodes.update(data.nodes);
   edges.update(data.edges);
+  style_edges();
+  size_nodes();
+}
+
+
+
+
+function style_edges() {
+  for (edge of iter_edges()) {
+    edge_d = edges.get(edge.id);
+    if (edge_d.edge_type=='in_boost_of') {
+      edge.options.arrows.to.type = 'circle';
+      edge.options.arrows.from.type = 'circle';
+      // edge.options.arrows.to.enabled = true;
+      // edge.options.arrows.from.enabled = false;
+    } else {
+      edge.options.arrows.to.type = 'arrow';
+      edge.options.arrows.from.type = 'bar';
+      // edge.options.arrows.to.enabled = true;
+      // edge.options.arrows.from.enabled = false;
+    }
+  }
+}
+
+function change_node_color(color) {
+  for (node of iter_nodes()) {
+    node_d = nodes.get(node.id);
+    if (node_d != null) {
+      node_d.font = {'color':color}
+      nodes.update(node_d);
+    }
+  }
+}
+
+function get_nodes_d(node_obj=true) {
+  d={};
+  for (n of iter_nodes()) {
+    if (node_obj) { nobj = n; } else { nobj = nodes.get(n.id); }
+    d[n.id] = nobj;
+  }
+  return d;
+}
+
+
+function get_node_scores(score_type=SCORE_TYPE, log = false) {
+  // get scores
+  scores = {};
+  for (node of iter_nodes()) { 
+    node_d = nodes.get(node.id);
+    if (node_d != null) {
+      score = node_d.scores[score_type]+1;
+      if (log) { score = Math.log10(score); }
+      scores[node.id] = score;
+    }
+  }
+  return scores;
+}
+
+function scaleBetween(unscaledNum, minAllowed, maxAllowed, min, max) {
+  return (maxAllowed - minAllowed) * (unscaledNum - min) / (max - min) + minAllowed;
+}
+
+function size_nodes(max_size=40, min_size=20, score_type=SCORE_TYPE) {  
+  scores = get_node_scores();
+  max_score = Math.max(...Object.values(scores));
+  min_score = Math.min(...Object.values(scores));
+  
+  if (isFinite(max_score)) {
+    new_nodes = [];
+    for (node of iter_nodes()) {
+      if (node.id in scores) {
+        nodescore = scores[node.id];
+        newsize = scaleBetween(nodescore, min_size, max_size, min_score, max_score);
+        // console.log(node.size, newsize);
+        // node.size=newsize;
+        node_d = nodes.get(node.id);
+        node_d['size'] = newsize;
+        // console.log(node_d);
+        nodes.update(node_d);
+      }
+    }
+    // nodes.update(new_nodes);
+  } 
+
+}
+
+
+// function style_edges() {
+//   for (edge of edges)
+// }
+
+
+
+
+function toggle_darkmode() {
+  if (DARKMODE==1) { set_light_mode(); } else { set_dark_mode(); }
+}
+
+function set_dark_mode() {
+  DARKMODE = 1;
+  $('body').css('background-color', darkbgcolor);
+  $('body').css('color', darktxtcolor);
+  $('#tweet').css('background-color', darktweetbg);
+  $('#tweet').css('border', '1px solid black');
+  $('input').css('background-color', darkbgcolor);
+  $('input').css('color', darktxtcolor);
+  $('#nightmode').attr('src',darkimg);
+  change_node_color(darktxtcolor);
+  socket.emit('set_darkmode', DARKMODE);
+}
+
+function set_light_mode() {
+DARKMODE = 0;
+
+$('body').css('background-color', lightbgcolor);
+$('body').css('color', lighttxtcolor);
+$('#tweet').css('background-color', lighttweetbg);
+$('#tweet').css('border', '1px solid lightgray');
+$('input').css('background-color', lightbgcolor);
+$('input').css('color', lighttxtcolor);
+$('#nightmode').attr('src',lightimg);
+change_node_color(lighttxtcolor);
+socket.emit('set_darkmode', DARKMODE);
+}
+
+// var currentMousePos = { x: -1, y: -1 };
+// $(document).mousemove(function(event) {
+//   currentMousePos.x = event.pageX;
+//   currentMousePos.y = event.pageY;
+//   // console.log(currentMousePos.x, currentMousePos.y);
+// });
+
+// NETWORK EVENTS
+
+network.on("hoverNode", function (params) {
+  show_status_div(params);
 });
 
-function startnet() {
-  console.log('starting network!');
-  update_nodes();
+
+
+network.on("click", function (_params) {
+  node_d = get_node(_params);
+  if (node_d == undefined) {
+    hide_status_div();
+  } else {
+    console.log(node_d.id, MODE);
+    // show_status_div(_params);
+
+    switch(MODE) {
+      case 'getcontext': 
+        // console.log('switch: getting context')
+        add_context(node_d.id);
+        // hide_status_div();
+        break;
+
+      case 'markread':
+        // console.log('switch: marking read')
+        del_nodes(node_d.id);
+        // hide_status_div();
+        break;
+
+      // default:
+        // show_status_div(_params);
+    }
+
+    // window.open(node_d.id, '_blank');
+  }
+});
+
+network.on("doubleClick", function (params) {
+  $('#tweet').hide();
+  // console.log(params);
+  node_d = get_node(params);
+  if (node_d != undefined) {
+    del_nodes(node_d.id);
+    // add_context(node_d);
+    // window.open(node_d.id, '_blank');
+  } else {
+    request_updates();
+  }
+});
+
+network.on("oncontext", function (params) {
+  $('#tweet').hide();
+  params.event.preventDefault();
+  node_d = get_node(params);
+  if (node_d != undefined) {
+    // del_nodes(node_d.id);
+    // window.open(node_d.id, '_blank');
+    add_context(node_d);
+  }
+});
+
+
+
+
+
+// socket events
+
+function request_updates() {
+  logmsg('refreshing');
+  socket.emit('get_updates')
 }
+
+socket.on('get_updates', function(data) { update_nodes(data); });
 
 // start
 $(document).ready(function(){  
   startnet();
-
-  // setTimeout(function() { update_nodes(); }, 1000);
-  socket.emit('start_updates');
+  
   
   setInterval(function() { socket.emit('get_pushes'); }, 1 * 1000);
-  setInterval(function() { socket.emit('get_updates'); }, 30 * 1000);
+  setInterval(function() { request_updates(); }, 30 * 1000);
+  // setInterval(function() { size_nodes(); }, 31 * 1000);
 
 
-  // var handle = $( "#custom-handle" );
-  // $( "#slider" ).slider({
-  //   create: function() {
-  //     handle.text( $( this ).slider( "value" ) );
-  //   },
-  //   slide: function( event, ui ) {
-  //     handle.text( ui.value );
-  //   }
-  // });
+  if (DARKMODE == 1) { set_dark_mode(); } else { set_light_mode(); }
 
+  
 });
 
+
+// Other events
+
+function set_mode_markread() {
+  if (MODE!='markread') {
+    MODE = 'markread';
+    $('body').css('cursor', 'crosshair');
+  }
+}
+function set_mode_getcontext() {
+  if (MODE!='getcontext') {
+    MODE = 'getcontext';
+    $('body').css('cursor', 'help');
+  }
+}
+function set_mode_default() {
+  if (MODE!='default') {
+    MODE = 'default';
+    $('body').css('cursor', 'default');
+  }
+}
+
+
+$(document).on('keydown', function (event) {
+  if (event.ctrlKey | event.metaKey) {
+      set_mode_markread();
+  } else if (event.altKey) {
+    set_mode_getcontext();
+  } else {
+    set_mode_default()
+  }   
+});
+
+$(document).on('keyup', function (event) {
+  set_mode_default();
+});
+
+
+
+function get_edge_ids() { 
+  data = [];
+  for ( edge of iter_edges() ) { data.push(edge.id); }
+  return data;
+}

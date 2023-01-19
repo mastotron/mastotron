@@ -1,10 +1,11 @@
 import os,sys; sys.path.insert(0,'..')
+import numpy as np
 from functools import cached_property, lru_cache, total_ordering
 cache = lru_cache(maxsize=None)
 from typing import Optional,Union,Dict,List
 from sqlmodel import Field, Session, SQLModel, create_engine, select, Relationship
 import numpy as np
-from mastodon.errors import MastodonNotFoundError
+from mastodon.errors import MastodonNotFoundError, MastodonNetworkError
 from mastodon import Mastodon, AttribAccessDict
 from datetime import datetime, timedelta, timezone
 from scipy.stats import gmean

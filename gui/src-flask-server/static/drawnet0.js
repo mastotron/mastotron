@@ -18,7 +18,7 @@ function draw(nodes = [], edges = []) {
   
 
   // create a network
-  var container = document.getElementById("mynetwork");
+  var container = document.getElementById("postnetviz");
   var data = {
     nodes: nodes,
     edges: edges,

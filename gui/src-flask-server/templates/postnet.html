@@ -7,19 +7,26 @@
     <link rel="stylesheet" href="/static/jquery-ui.css">
     <link rel="stylesheet" href="/static/postnet.css">
 
+    <script type="text/javascript">
+      var DARKMODE = {{session.get('DARKMODE',0)}};
+    </script>
+
     <script type="text/javascript" src="/static/vis-network.min.js"></script>
     <script type="text/javascript" src="/static/jquery-latest.min.js"></script>
     <script type="text/javascript" src="/static/jquery-ui.js"></script>
     <script type="text/javascript" src="/static/jquery.flash.js"></script>
     <script type="text/javascript" src="/static/socket.io.js"></script>
     <script type="text/javascript" src="/static/utils.js"></script>
-      
-    </script>
+
     
+          
   </head>
 
   <body>
-    <div id="header">mastotron v0.2</div>
+    <div id="header">
+      mastotron v0.3
+      <div id="optbuttons"><a onclick="toggle_darkmode()"><img id="nightmode" src="/static/dark-mode-6682.png" width="20" height="20" /></a></div>
+    </div>
 
     <div id="config">
       <form id="configform">
@@ -33,12 +40,15 @@
         
         <!-- <input id="configform_submit" type="submit" value="Login"> -->
       </form>
+      
+
+      
     </div>
 
     <div id="logmsg"></div>
     </div>
 
-    <div id="mynetwork"></div>
+    <div id="postnetviz"></div>
     <div id="tweet" hidden></div>
 
 
