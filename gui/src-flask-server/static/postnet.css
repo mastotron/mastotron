@@ -25,6 +25,8 @@ a { color: lightblue; }
     right:5px;
     vertical-align: middle;
     font-size: 12pt;
+    z-index:1;
+
     /* letter-spacing: .5em; */
     /* color: gray; */
 }
@@ -33,8 +35,9 @@ font: 10pt arial;
 }
 
 #postnetviz {
-height: 95vh; /* For 100% screen height */
-width:  95vw; /* For 100% screen width */
+height: 99vh; /* For 100% screen height */
+width:  99vw; /* For 100% screen width */
+/* border: 1px dotted slategrey; */
 
 /* width: 100%; */
 /* height: 800px; */
@@ -43,24 +46,23 @@ width:  95vw; /* For 100% screen width */
 /* float:right; */
 }
 #tweet { 
-position: absolute;
-top: 10px;
-left: 10px;
-/* min-width:300px; */
-/* max-width: 400px; */
-width: 350px;
-padding: 0;
-margin: 0;
-background-color: white;
-border-radius: 25px;
-/* color: black; */
-border: 1px solid #888888;
-/* font-size:1.25em; */
-backdrop-filter: blur(3px);
-overflow: hidden;
-/* white-space: nowrap; */
-text-overflow: ellipsis;
-
+    position: absolute;
+    top: 5vh;
+    right: 5vh;
+    /* min-width:300px; */
+    /* max-width: 400px; */
+    width: 400px;
+    padding: 0;
+    margin: 0;
+    background-color: white;
+    border-radius: 25px;
+    /* color: black; */
+    border: 1px solid #888888;
+    /* font-size:1.25em; */
+    backdrop-filter: blur(3px);
+    overflow: hidden;
+    /* white-space: nowrap; */
+    text-overflow: ellipsis;
 }
 #optbuttons {
     text-align:right;
@@ -90,7 +92,7 @@ margin: 0;
 /* text-align: center; */
 /* border: 1px solid darkgray; */
 /* color: red; */
-font-size:14pt;
+font-size:13pt;
 }
 .post_uristr {
     font-size:11pt;

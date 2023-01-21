@@ -39,11 +39,12 @@ socket.on('logmsg', function(e){
 });
 
 function logmsg(x) {
+    console.log('logmsg',x);
     $.flash(x);
 }
 
-$(document).ready(function(){
-    setTimeout(function() {
-        $('#flash').fadeOut('slow');
-    }, 2000); // <-- time in milliseconds
-})
+// $(document).ready(function(){
+//     setTimeout(function() {
+//         $('#flash').fadeOut('slow');
+//     }, 2000); // <-- time in milliseconds
+// })

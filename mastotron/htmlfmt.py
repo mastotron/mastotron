@@ -8,7 +8,7 @@ def to_html(x, **y):
         return ''
 
 #                 <p>Post ID: <a href="{self._id}" target="_blank">{self.id}</a></p>
-def post_to_html(self, allow_embedded = True, **y): 
+def post_to_html(self, allow_embedded = True, url=None, **y): 
     datestr=f'<a href="{self._id}" target="_blank">{self.datetime_str_h}</a>'
     austr=f'<img class="post_avatarimg" src="{self.author.avatar}" width="50px" height="50px" /><a href="{self._id}" target="_blank">{self.author.display_name}</a> ({self.author.followers_count:,} 👥)'
     imgs_urls = [d.get('preview_url') for d in self.media_attachments] if self.media_attachments else []
@@ -37,6 +37,7 @@ def post_to_html(self, allow_embedded = True, **y):
     hdrstr=f'<div class="post_author">{austr}</div>'
     uristr=f''
     # stats
+    if not url: url=self._id
     stats_str = f'''
         <div class="post_stats">
             {self.replies_count:,} 🗣
@@ -45,11 +46,11 @@ def post_to_html(self, allow_embedded = True, **y):
             |
             {self.favourites_count:,} 💙
             |
-            <span class="post_uristr"><a href="{self._id}" target="_blank">Posted {self.datetime_str_h}</a></span>
+            <span class="post_uristr"><a href="{url}" target="_blank">Posted {self.datetime_str_h}</a></span>
         </div>
     ''' if not self.is_boost else f'''
         <div class="post_stats">
-            <span class="post_uristr">Reposted <a href="{self._id}" target="_blank">{self.datetime_str_h}</a></span>
+            <span class="post_uristr">Reposted <a href="{url}" target="_blank">{self.datetime_str_h}</a></span>
         </div>
     '''
 
@@ -57,6 +58,7 @@ def post_to_html(self, allow_embedded = True, **y):
         <div class="{class_str}">
             {hdrstr}
             {self.content}
+            {imgs_str}
             {embed_str}
             {stats_str}
         </div>

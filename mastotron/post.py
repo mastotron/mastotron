@@ -6,7 +6,7 @@ from .db import TronDB
 in_reply_to_uri_key = 'in_reply_to__id'
 
 def Post(url_or_uri_x, **post_d):
-    from mastotron import Tron
+    from .mastotron import Tron    
     return Tron().post(url_or_uri_x, **post_d)
 
 
@@ -34,31 +34,37 @@ class PostModel(DictModel):
     def is_valid(self):
         return bool(self._id)
 
-    @property
+    @cached_property
     def server(self):
         return parse_account_name(self.url)[-1]
-    @property
+    @cached_property
     def un(self):
-        return parse_account_name(self.url)[-1]
+        return parse_account_name(self.url)[0]
+    @cached_property
+    def acct(self):
+        return f'{self.un}@{self.server}'
+
 
     def api(self):
-        from mastotron import Tron
+        from .mastotron import Tron
         return Tron().api_server(self.server)
     
 
     @property
     def author(self):
         from .poster import Poster
-        return Poster(self.account)
+        return Poster(self.account, _id=self.acct)
 
-    # def get_url_local(self, server):
-        # return '/'.join([server,'@'+self.acct])
+    def get_url_local(self, server):
+        from .mastotron import Tron
+        cache=Tron().cache('url_to_uri')
+        return cache.get(f'{self._id}__in__{server}')
     
     @property
     def timestamp(self):
         return self._data.get(
             'timestamp',
-            int(round(self.datetime.timestamp()))
+            self.datetime.timestamp()
         )
 
     @cached_property
@@ -267,9 +273,15 @@ class PostModel(DictModel):
     def __repr__(self): return f"Post('{self._id}')"
     def _repr_html_(self): return self.html
 
-    def get_html(self, allow_embedded=False):        
+    def get_html(self, allow_embedded=False, server=None):
         from .htmlfmt import post_to_html
-        return post_to_html(self, allow_embedded=allow_embedded)
+        local_url=self.get_url_local(server)
+        print('local_url',local_url)
+        return post_to_html(
+            self, 
+            allow_embedded=allow_embedded,
+            url=local_url if server else None
+        )
     
     @property
     def num_reblogs(self):
@@ -355,11 +367,17 @@ class PostModel(DictModel):
     @property
     def label(self): return self.get_label()
 
-    def get_label(self, limsize=40):
+    def get_label(self, limsize=40, limwords=4, replace_urls=True):
         import html
-        stext = self.spoiler_text
-        if not stext: stext=' '.join(w for w in self.text.split() if w and w[0]!='@')
-        return html.unescape(stext)[:limsize].strip()
+        #stext = self.spoiler_text
+        #if not stext: 
+        stext=' '.join(w for w in self.text.split() if w and w[0]!='@')
+        stext=html.unescape(stext).strip()
+        if limwords: stext=' '.join(stext.split()[:limwords])
+        if replace_urls: stext=' '.join(w.split('://',1)[-1][:20] if w.startswith('http') else w for w in stext.split())
+        if limsize: stext=stext[:limsize]
+
+        return stext.strip()
 
     def save(self):
         # data = {str(k):str(v) for k,v in self.data.items()}

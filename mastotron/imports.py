@@ -1,4 +1,5 @@
 import os,sys; sys.path.insert(0,'..')
+from pprint import pprint, pformat
 import numpy as np
 from functools import cached_property, lru_cache, total_ordering
 cache = lru_cache(maxsize=None)
@@ -57,4 +58,4 @@ from .postlist import *
 from .postnet import *
 from .db import *
 from .graphdb import *
-
+from .htmlfmt import *

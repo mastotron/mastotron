@@ -9,12 +9,13 @@ var darktxtcolor = 'white';
 var lighttxtcolor = 'black';
 var darkimg = "/static/dark-mode-6682-inv.png";
 var lightimg = "/static/dark-mode-6682.png";
-var limnodesgraph = 50;
+var limnodesgraph = 25;
 if (DARKMODE==1) { 
   var txtcolor = darktxtcolor; 
 } else { 
   var txtcolor = lighttxtcolor;  
 }
+var nodebordercolor = '#6F0C80';
 
 
 // start containers
@@ -26,21 +27,27 @@ var options = {
   interaction:{
     hover: true,
     zoomSpeed: .1,
+    multiselect: true
   },
 
   edges:{
-    color: "silver",
+    color: "gray",
     arrows: {
       to: {
         enabled: true,
-        scaleFactor: .6,
+        scaleFactor: 1,
       },
       middle: { enabled: false },
       from: { 
         enabled: false,
         scaleFactor: .4,
       }
-    }
+    },
+    smooth: {
+      enabled: false,
+      type: "dynamic",
+      roundness: 0.5
+    },
   },
 
   nodes: {
@@ -56,9 +63,74 @@ var options = {
     },
   },
 
-  physics: {
-    // wind: { x: 0, y: .25 }
+  layout: {
+    randomSeed: 69,
+    improvedLayout:true,
+    clusterThreshold: 150,
+    hierarchical: {
+      enabled:false,
+      levelSeparation: 150,
+      nodeSpacing: 25,
+      treeSpacing: 50,
+      blockShifting: true,
+      edgeMinimization: true,
+      parentCentralization: true,
+      direction: 'UD',        // UD, DU, LR, RL
+      sortMethod: 'directed',  // hubsize, directed
+      shakeTowards: 'roots'  // roots, leaves
+    }
   },
+
+  physics:{
+    enabled: true,
+    barnesHut: {
+      // theta: 0.5,
+      // gravitationalConstant: -3000,
+      // centralGravity: 1,
+      // springLength: 95,
+      springConstant: 0,
+      // damping: 0.09,
+      avoidOverlap: 1
+    },
+    forceAtlas2Based: {
+      theta: 0.5,
+      gravitationalConstant: -50,
+      centralGravity: 0.01,
+      springConstant: 0.08,
+      springLength: 100,
+      damping: 0.4,
+      avoidOverlap: 0
+    },
+    repulsion: {
+      centralGravity: 0.2,
+      springLength: 200,
+      springConstant: 0.5,
+      nodeDistance: 150,
+      damping: 0.09
+    },
+    hierarchicalRepulsion: {
+      centralGravity: 5,
+      springLength: 200,
+      springConstant: 100,
+      nodeDistance: 150,
+      damping: 1,
+      avoidOverlap: 1
+    },
+    maxVelocity: 5,
+    minVelocity: .1,
+    solver: 'hierarchicalRepulsion',
+    stabilization: {
+      enabled: true,
+      iterations: 1000,
+      updateInterval: .1,
+      onlyDynamicEdges: false,
+      fit: true
+    },
+    timestep: .1,
+    adaptiveTimestep: true,
+    // wind: { x: 0, y: -100 }
+  },
+  
 };
 
 var network = new vis.Network(container, data, options);
@@ -73,6 +145,17 @@ function startnet() {
 
 function iter_edges() { return Object.values(network.body.edges); }
 function iter_nodes() { return Object.values(network.body.nodes); }
+
+function iter_nodes_d() { 
+  newnodes=[];
+  for (node of iter_nodes()) {
+    node_d = nodes.get(node.id);
+    if (node_d != null) {
+      newnodes.push(node_d);
+    }
+  }
+  return newnodes;
+}
 
 
 // UI functions
@@ -106,18 +189,21 @@ function show_status_div(params) {
   node_d = get_node(params);
   node_pos = network.getPosition(node_d.id);
   node_pos_web = network.canvasToDOM(node_pos);
-  _offset = 0;
+  _offset = 20;
   $('#tweet').html(node_d['html']);  
   x = node_pos_web['x'];
   y = node_pos_web['y'];
-  $('#tweet').offset(
-    { top: y + _offset, 
-      left: x + _offset
-    });
+  // $('#tweet').offset(
+  //   { 
+  //     top: y + _offset, 
+  //     left: x + _offset
+  //     // top:_offset,
+  //     // right:0
+  //   });
   $('#tweet').show();
 }
 
-function hide_status_div() { $('#tweet').hide(); }
+function hide_status_div() { $('#tweet').fadeOut(500); }
 
 function nodes_to_ids(_nodes) {
   _nodes_ids = [];
@@ -147,17 +233,31 @@ function getdownstreamnodes(node_id, recurse=2) {
   return [...new Set(nodes_downstream_ids)];
 }
 
-function del_nodes(node_id) {
-  node_ids_to_del = getdownstreamnodes(node_id);
-  console.log('mark_as_read',node_ids_to_del);
-  socket.emit('mark_as_read', node_ids_to_del);
-  nodes.remove(node_ids_to_del);
-  size_nodes();
+function del_node(node_id, recursive = true) {
+  if (recursive) {
+    node_ids_to_del = getdownstreamnodes(node_id);
+  } else {
+    node_ids_to_del = [node_id];
+  }
+
+  del_nodes(node_ids_to_del);
+}
+
+function del_nodes(node_ids) {
+  if (node_ids.length>0) {
+    socket.emit('mark_as_read',node_ids);
+    nodes.remove(node_ids);
+    // style_nodes();
+  }
 }
 
 function add_context(node_id) {
   console.log('getting context for:',node_id);
   socket.emit('add_context', node_id)
+}
+function add_full_context(node_id) {
+  console.log('getting full context for:',node_id);
+  socket.emit('add_full_context', node_id)
 }
 
 
@@ -165,16 +265,60 @@ function add_context(node_id) {
 // socket events
 
 
-
-
-function update_nodes(data) {
-  lim = limnodesgraph;
-  nodes.update(data.nodes);
-  edges.update(data.edges);
-  style_edges();
-  size_nodes();
+function lim_nodes_by_time() {
+  times = [];
+  todel = [];
+  nodes.forEach(function(n) { times.push(n.timestamp)});
+  nodes.forEach(function(n) { 
+    rank = getIndexToIns(times, n.timestamp);
+    if (rank > limnodesgraph) {
+      todel.push(n.id);
+    }
+  });
+  nodes.remove(todel);
 }
 
+function lim_nodes() {
+  // console.log('num nodes',nodes.length);
+  if (nodes.length > limnodesgraph) {
+    todel=[];
+    iter_nodes_d().slice(
+      0, nodes.length - limnodesgraph
+    ).forEach(
+      function(n){todel.push(n.id)}
+    );
+    nodes.remove(todel);
+  }
+  // console.log('num nodes',nodes.length);
+}
+
+function update_nodes(data) {
+  fix_nodes();
+  nodes.update(data.nodes);
+  edges.update(data.edges);
+  fix_nodes();
+  style_edges();
+  lim_nodes();
+  style_nodes();
+  // network.startSimulation();
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function fix_nodes() {
+  iter_nodes().forEach(function(n){
+    nd=nodes.get(n.id);
+    nd['x']=n.x;
+    nd['y']=n.y;
+    // nd['fixed']={x:true,y:true}
+    // console.log(nd.x, nd.y, n.x, n.y,nd.fixed);
+    // nodes.update(nd);
+    // nd['fixed']={x:false,y:false}
+    // nodes.update(nd);
+  });
+}
 
 
 
@@ -191,6 +335,19 @@ function style_edges() {
       edge.options.arrows.from.type = 'bar';
       // edge.options.arrows.to.enabled = true;
       // edge.options.arrows.from.enabled = false;
+    }
+  }
+}
+
+function style_nodes() {
+  repos_nodes();
+  size_nodes();
+  // nodes.forEach(function(n) { n.fixed={x: true, y: true} });
+  for (node_d of iter_nodes_d()) {
+    nedges = network.getConnectedEdges(node_d.id);
+    if (node_d.num_replies>nedges.length) {
+      node_d.color = nodebordercolor;
+      node_d.borderWidth=5;
     }
   }
 }
@@ -306,48 +463,65 @@ socket.emit('set_darkmode', DARKMODE);
 // NETWORK EVENTS
 
 network.on("hoverNode", function (params) {
+  node_d = get_node(params);
+  network.selectNodes([node_d.id]); 
   show_status_div(params);
+});
+network.on("blurNode", function (params) {
+  // hide_status_div();
+  // network.unselectAll();
+});
+network.on("dragEnd", function (params) {
+  // iter_nodes_d().forEach(function(nd){nd.fixed={x:true,y:true}; nodes.update(nd)});
+  // iter_nodes_d().forEach(function(nd){nd.fixed={x:true,y:true}});
+  for (var i = 0; i < params.nodes.length; i++) {
+      var nodeId = params.nodes[i];
+      // nodes.update({id: nodeId, fixed: {x: false, y: false}});
+  }
+});
+network.on('dragStart', function(params) {
+  for (var i = 0; i < params.nodes.length; i++) {
+      var nodeId = params.nodes[i];
+      // nodes.update({id: nodeId, fixed: {x: false, y: false}});
+  }
+  // iter_nodes_d().forEach(function(nd){nd.fixed={x:false,y:false}; nodes.update(nd)});
+});
+
+network.on("stabilizationIterationsDone", function(obj) {
+  logmsg('done stabilizing network');
+  console.log(obj);
+  // nodes.forEach(function(n) { n.fixed={x: true, y: true}; nodes.update(n); });
 });
 
 
 
 network.on("click", function (_params) {
   node_d = get_node(_params);
+  console.log('clicked:', node_d);
   if (node_d == undefined) {
     hide_status_div();
   } else {
-    console.log(node_d.id, MODE);
-    // show_status_div(_params);
-
-    switch(MODE) {
-      case 'getcontext': 
-        // console.log('switch: getting context')
-        add_context(node_d.id);
-        // hide_status_div();
-        break;
-
-      case 'markread':
-        // console.log('switch: marking read')
-        del_nodes(node_d.id);
-        // hide_status_div();
-        break;
-
-      // default:
-        // show_status_div(_params);
+    node_id = node_d.id;
+    e = _params.event.srcEvent;
+    if (e.ctrlKey | e.metaKey) {
+      console.log('del node!',node_id);
+      del_node(node_id);
+    } else if (e.altKey & e.shiftKey) {
+      add_full_context(node_id);
+    } else if (e.altKey) {
+      add_context(node_id);
     }
-
-    // window.open(node_d.id, '_blank');
   }
 });
 
 network.on("doubleClick", function (params) {
   $('#tweet').hide();
-  // console.log(params);
+  console.log('double clicked');
   node_d = get_node(params);
   if (node_d != undefined) {
-    del_nodes(node_d.id);
+    // del_node(node_d.id);
     // add_context(node_d);
-    // window.open(node_d.id, '_blank');
+    window.open(node_d.id, '_blank');
   } else {
     request_updates();
   }
@@ -358,7 +532,7 @@ network.on("oncontext", function (params) {
   params.event.preventDefault();
   node_d = get_node(params);
   if (node_d != undefined) {
-    // del_nodes(node_d.id);
+    // del_node(node_d.id);
     // window.open(node_d.id, '_blank');
     add_context(node_d);
   }
@@ -375,7 +549,11 @@ function request_updates() {
   socket.emit('get_updates')
 }
 
-socket.on('get_updates', function(data) { update_nodes(data); });
+socket.on('get_updates', function(data) {
+  logmsg('refreshed');
+  // console.log('got updates:', data); 
+  update_nodes(data); 
+});
 
 // start
 $(document).ready(function(){  
@@ -383,9 +561,8 @@ $(document).ready(function(){
   
   
   setInterval(function() { socket.emit('get_pushes'); }, 1 * 1000);
+  setInterval(function() { fix_nodes(); }, 100);
   setInterval(function() { request_updates(); }, 30 * 1000);
-  // setInterval(function() { size_nodes(); }, 31 * 1000);
-
 
   if (DARKMODE == 1) { set_dark_mode(); } else { set_light_mode(); }
 
@@ -416,8 +593,23 @@ function set_mode_default() {
 
 
 $(document).on('keydown', function (event) {
-  if (event.ctrlKey | event.metaKey) {
+  console.log(event);
+  if ((event.which == 8) | (event.which==88) | (event.which==82)) { // backspace or x
+      // del_nodes(network.getSelectedNodes());
+      network.getSelectedNodes().forEach(function(n){
+        console.log(n);
+        del_node(n);
+      })
+  } else if (event.ctrlKey | event.metaKey) {
+    console.log(event);
+    if (event.which == 65) { // a (select all)
+      event.preventDefault();
+      node_ids = [];
+      iter_nodes_d().forEach(function(nd){node_ids.push(nd.id)});
+      network.selectNodes(node_ids);
+    } else {
       set_mode_markread();
+    }
   } else if (event.altKey) {
     set_mode_getcontext();
   } else {
@@ -435,4 +627,83 @@ function get_edge_ids() {
   data = [];
   for ( edge of iter_edges() ) { data.push(edge.id); }
   return data;
+}
+function getIndexToIns(arr, num) {
+  // Sort arr from least to greatest.
+    let sortedArray = arr.sort((a, b) => a - b)
+  //                  [40, 60].sort((a, b) => a - b)
+  //                  [40, 60]
+
+  // Compare num to each number in sortedArray
+  // and find the index where num is less than or equal to 
+  // a number in sortedArray.
+    let index = sortedArray.findIndex((currentNum) => num <= currentNum)
+  //            [40, 60].findIndex(40 => 50 <= 40) --> falsy
+  //            [40, 60].findIndex(60 => 50 <= 60) --> truthy
+  //            returns 1 because num would fit like so [40, 50, 60]
+
+  // Return the correct index of num.
+  // If num belongs at the end of sortedArray or if arr is empty 
+  // return the length of arr.
+    return index === -1 ? arr.length : index
+}
+
+
+function repos_nodes(
+    factor1=2,
+    factor2=200,
+    overwrite=false
+  ) {
+  scores = []; timestamps = []; nodes_d = [];
+  
+  min_x=-1 * factor1 * factor2
+  max_x=1 * factor1 * factor2
+  min_y=-1 * factor1 * factor2
+  max_y=1 * factor1 * factor2
+  for (nd of iter_nodes_d()) {
+    // console.log(nd.id, nd.score, nd.timestamp);
+    if ((nd.score !=undefined) & (nd.timestamp != undefined)) {
+      nodes_d.push(nd);
+      scores.push(nd.score);
+      timestamps.push(1*nd.timestamp);
+    }    
+  }
+
+  // minscore = Math.min(...scores);
+  // maxscore = Math.max(...scores);
+  // mintime = Math.min(...timestamps);
+  // maxtime = Math.max(...timestamps);
+
+  minscore = 0;
+  maxscore = scores.length;
+  mintime = 0;
+  maxtime = timestamps.length;
+
+
+  // console.log('min score =',minscore)
+  // console.log('max score =',maxscore)
+  // console.log('min time =',mintime)
+  // console.log('max time =',maxtime)
+
+  ndl=[];
+  for (nd of nodes_d) {
+    // console.log('node',nd.id,'has x,y now of',nd.x,nd.y,'with score of',nd.score,nd.timestamp);
+    // console.log('overwrite',overwrite,!nd.x,!nd.y,nd.x,nd.y);
+    if (overwrite | (nd.x==undefined) | (nd.y==undefined)) {
+      score = getIndexToIns(scores, nd.score);
+      timestamp = getIndexToIns(timestamps, 1*nd.timestamp);
+      new_score_xy = scaleBetween(score,min_x,max_x,minscore,maxscore);
+      new_time_xy = scaleBetween(timestamp,max_y,min_y,mintime,maxtime);
+
+      if(new_score_xy & new_time_xy) {
+        nd['x'] = new_score_xy;
+        nd['y'] = new_time_xy;
+        // nd['fixed'] = {x: false, y: false};
+        // console.log([nd.score, nd.timestamp], [nd.x, nd.y]);
+        // console.log('node',nd.id,'has NEW x,y of',nd.x,nd.y,'with sorted',score,timestamp);
+        ndl.push(nd);
+      }
+    }
+  }
+  nodes.update(ndl);
 }

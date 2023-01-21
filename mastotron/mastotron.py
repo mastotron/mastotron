@@ -113,21 +113,30 @@ class Mastotron():
         return res
 
     def get_uri(self, url_or_uri):
+        print('????',url_or_uri)
         uri = url_or_uri
-        # with self.cache('url_to_uri') as cache:
-            # uri = cache.get(uri,uri)
-        uri2 = self.cache('url_to_uri').get(uri)
-        uri = uri2 if uri2 else uri
-        uri = to_uri(uri)
-        return uri
+        if not uri: 
+            return
+        orig_server = get_server_name(uri)
+        cache=self.cache('url_to_uri')
+        uri2 = cache.get(uri)
+        uri3 = to_uri(uri2 if uri2 else uri)
+        o=uri3 if uri3 else (uri2 if uri2 else uri)
+        cache[uri] = o
+        cache[o+'__in__'+orig_server]=o
+        print(uri,'-->',o)
+        print(o+'__in__'+orig_server,'-->',o)
+        return o
         
         
 
     def post(self, url_or_uri, **post_d):
         post = None
+        if not url_or_uri: return
 
         # ensure appropriate format
         uri = self.get_uri(url_or_uri)
+        print(['uri?',uri,url_or_uri])
         if not uri: return
         
         # if cached
@@ -146,14 +155,18 @@ class Mastotron():
                 post_d = self.status(uri)
             
             if post_d: 
-                uri2 = post_d.get('url')
-                if uri != uri2 and uri2:
-                    cache=self.cache('url_to_uri')
-                    cache[uri] = uri2
-                    uri = uri2
+                # print(post_d.keys())
+                uri2 = post_d.get('url',uri)
+                uri3 = self.get_uri(uri2)
+                # if uri3 and uri2 and uri2 != uri3:
+                #     cache=self.cache('url_to_uri')
+                #     cache[uri] = uri2
+                #     uri = uri2
+
+                # print([uri,uri2,uri3])
 
                 # log.debug('saving post_d into trondb')
-                post = PostModel({**post_d, '_id':uri})
+                post = PostModel({**post_d, '_id':uri3 if uri3 else uri2})
                 db.set_post(post.data)
 
         if post:
@@ -179,11 +192,11 @@ class Mastotron():
     def latest(self, **kwargs):
         return PostList(list(self.latest_iter(**kwargs)))
 
-    def latest_iter(self, mins_ago=60, unread=True):
+    def latest_iter(self, mins_ago=60, unread_only=True):
         now = int(round(datetime.now().timestamp()))
         then = now - (mins_ago * 60)
         
-        func=TronDB().since if not unread else TronDB().since_unread
+        func=TronDB().since if not unread_only else TronDB().since_unread
         for post in func(then):
             post = PostModel(dict(post))
             if post.is_valid:
@@ -194,29 +207,51 @@ class Mastotron():
         uris = [row['uri'] for row in self.db.all()[-n:]]
         return PostList([self.post(uri) for uri in uris])
     
-    def timeline_iter(self, account_name, timeline_type='local'):
+    def timeline_iter(self, account_name, timeline_type='local', unread_only=True, lim=50, lim_iter=5):
         api = self.api_user(account_name)
         try:
             timeline = api.timeline(timeline=timeline_type)
-            seen_urls = self._seen_urls
+            num_yielded = 0
+            num_looped = 0
             while timeline:
+                num_looped+=1
+                if num_looped>lim_iter: break
+
                 for post_d in timeline:
-                    uri = to_uri(post_d.url if post_d.url else post_d.uri)
-                    if uri and uri not in seen_urls:
-                        seen_urls.add(uri)
+                    pprint(post_d)
+                    stopx
+                    # uri = to_uri(post_d.url if post_d.url else post_d.uri)
+                    uri = post_d.url if post_d.url else post_d.uri
+                    print('uri!!',uri)
+                    if uri:# and uri not in seen_urls:
+                        # seen_urls.add(uri)
                         post = self.post(uri, **dict(post_d))
-                        if post: yield post
+                        if post: 
+                            if not unread_only or not post.is_read:
+                                yield post
+                                num_yielded+=1
+                                if lim and num_yielded>=lim: 
+                                    timeline = None
+                                    break
                 # keep going
+                if timeline is None: break
                 try:
                     timeline = api.fetch_previous(timeline)
-                except MastodonNetworkError:
+                except MastodonNetworkError as e:
+                    log.error(e)
+                    print(e)
                     api = self.api_user(account_name)
                     try:
                         timeline = api.fetch_previous(timeline)
-                    except MastodonNetworkError:
+                    except MastodonNetworkError as e:
+                        print(e)
                         timeline = None
-        except MastodonNetworkError:
+        except MastodonNetworkError as e:
+            print(e)
+            log.error(e)
             pass
+
+        # print(num_looped, num_yielded, timeline)
                 
 
 
