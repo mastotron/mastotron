@@ -77,7 +77,7 @@ class NodeListener(StreamListener):
 
 @socketio.event
 def start_updates(data={}):
-    # return
+    return
     global seen_posts, STARTED
     seen_posts = set()
     if not STARTED:
@@ -106,7 +106,7 @@ def get_pushes(data={}):
 def get_updates(data={}):
     acct = get_acct_name()
     if not acct: return
-    tl = Tron().timeline(acct, lim=10)
+    tl = Tron().latest(acct, lim=LIM_TIMELINE)
     update_posts(
         tl,
         omsg='timeline updated',
@@ -119,16 +119,19 @@ def update_posts(tl, omsg='refreshed', emit_key='get_updates',ids_done=None):
     if len(tl):
         tnet = tl.network()
         nx_g = tnet.graph()
-        nx_g.remove_nodes_from(
-            n 
-            for n,d in list(nx_g.nodes(data=True))
-            if d.get('is_read')
-            or (ids_done and d.get('id') in ids_done)
-        )       
+        # nx_g.remove_nodes_from(
+        #     n 
+        #     for n,d in list(nx_g.nodes(data=True))
+        #     if d.get('is_read')
+        #     or (ids_done and d.get('id') in ids_done)
+        # )
+        print('nx_g',nx_g.order(),nx_g.size())
         nodes = [d for n,d in nx_g.nodes(data=True)]
         edges = [d for a,b,d in nx_g.edges(data=True)]
+        pprint([(d['from'],d['to']) for d in edges])
         
         omsg = f'{len(nodes)} new updates @ {get_time_str()}'
+        # if bool(nodes) or bool(edges):
         if nodes or edges:
             odata = dict(nodes=nodes, edges=edges, logmsg=omsg)
             emit(emit_key, odata)
@@ -142,10 +145,10 @@ def update_posts(tl, omsg='refreshed', emit_key='get_updates',ids_done=None):
 def add_context(node_id):
     print('add_context',node_id)
     post = Post(node_id)
-    if post:
-        context = post.get_context(lim=5, as_list=False, recurse=0, interrelate=False)
-        if len(context):
-            update_posts(context)
+    print('!',post)
+    print('!!!',post.convo)
+    res = update_posts(post.convo[:LIM_TIMELINE])
+    print('????',res)
 
 
 

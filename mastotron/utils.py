@@ -178,8 +178,12 @@ def get_now(timestamp=None):
         else dt.datetime.now()
     )
 
-def iter_graphtimes(timestamp=None, by=GRAPHTIME_ROUNDBY):
-    current_time = get_now(timestamp)
+def iter_graphtimes(timestamp=None, by=GRAPHTIME_ROUNDBY, max_days=365):
+    now = get_now(timestamp)
+    current_time = now
     while True:
         yield get_graphtime_str(timestamp=current_time.timestamp())
         current_time -= dt.timedelta(minutes=GRAPHTIME_ROUNDBY)
+        if abs(now - current_time) > dt.timedelta(days=max_days):
+            break
+

@@ -137,12 +137,48 @@ class Mastotron():
         return cache[uri]
 
     
-    def latest(self, acct='', **kwargs):
-        return PostList(list(self.latest_iter(**kwargs)))
+    def latest(self, acct='', lim=LIM_TIMELINE, **kwargs):
+        iterr = self.iter_latest(acct=acct, lim=lim, **kwargs)
+        return PostList(iterr, lim=lim)
 
-    def latest_iter(self, timestamp=None):
+    def iter_latest(
+            self,
+            acct='', 
+            unread_only=True, 
+            lim=LIM_TIMELINE, 
+            follow_chains=True, 
+            **kwargs):
+            
+        def iter_posts():
+            if acct: yield from self.iter_timeline(acct, unread_only=unread_only, lim=lim, **kwargs)
+            yield from self.database_iter(**kwargs)
+
+        def iter_posts_filtered():
+            seen=set()
+            for post in iter_posts():
+                if not post in seen:
+                    seen.add(post)
+                    if unread_only and post.is_read: continue
+                    yield post
+        
         seen=set()
-        for timestr in iter_graphtimes(timestamp):
+        for post in iter_posts_filtered():
+            yield post
+            seen.add(post)
+        
+        if follow_chains:
+            for post in seen:
+                yield from post.iter_context(lim=lim)
+
+
+    def database_iter(self,timestamp=None,**kwargs):
+        seen=set()
+        # iterr=tqdm(
+        #     list(iter_graphtimes(timestamp)),
+        #     desc=f'Querying every {GRAPHTIME_ROUNDBY} mins'
+        # )
+        iterr=iter_graphtimes(timestamp)
+        for timestr in iterr:
             rels = TronDB().get_rels_inc(timestr, REL_GRAPHTIME)
             for id in rels:
                 post=Post(id).source
@@ -150,31 +186,26 @@ class Mastotron():
                     seen.add(post)
                     yield post                
 
-
-    def latest_iter_orig(self, mins_ago=60, unread_only=True):
-        now = int(round(datetime.now().timestamp()))
-        then = now - (mins_ago * 60)
+    def iter_timeline(
+            self,
+            account_name, 
+            timeline_type='home', 
+            unread_only=True, 
+            lim=LIM_TIMELINE, 
+            lim_iter=5, 
+            as_source=True,
+            **kwargs):
         
-        func=TronDB().since if not unread_only else TronDB().since_unread
-        for post in func(then):
-            post = PostModel(dict(post))
-            if post.is_valid:
-                yield post
-
-
-    def latest_n(self, n=10):
-        uris = [row['uri'] for row in self.db.all()[-n:]]
-        return PostList([self.post(uri) for uri in uris])
-    
-    def timeline_iter(self, account_name, timeline_type='home', unread_only=True, lim=20, lim_iter=5, as_source=True):
         un,server=parse_account_name(account_name)
         api = self.api_user(account_name)
         seen=set()
         try:
+            print('calling timeline now')
             timeline = api.timeline(timeline=timeline_type, local=False, remote=False)
             num_yielded = 0
             num_looped = 0
             ii=0
+            # pbar = tqdm(total=lim)
             while timeline:
                 num_looped+=1
                 if num_looped>lim_iter: break
@@ -186,14 +217,16 @@ class Mastotron():
                         post = self.post(iduri, **dict(post_d))
                         if post: 
                             if not unread_only or not post.is_read:
-                                print(f'{ii:04} {post} {"is" if post.is_read else "is not"} read and it {"is" if post.is_boost else "is not"} a boost post')
+                                log.debug(f'{ii:04} {post} {"is" if post.is_read else "is not"} read and it {"is" if post.is_boost else "is not"} a boost post')
                                 opost = post.source if as_source else post
                                 if not opost in seen:
+                                    # pbar.update()
                                     yield opost
                                     seen.add(opost)
                                     num_yielded+=1
                                     if lim and num_yielded>=lim: 
                                         timeline = None
+                                        # pbar.close()
                                         break
                 # keep going
                 if timeline is None: break
@@ -212,15 +245,16 @@ class Mastotron():
             print(e)
             log.error(e)
             pass
+        
+        pbar.close()
 
         # print(num_looped, num_yielded, timeline)
                 
 
 
     def timeline(self, account_name, lim=LIM_TIMELINE, **y):
-        iterr = self.timeline_iter(account_name, lim=lim, **y)
-        # res = list(islice(iterr, n))
-        return PostList(iterr)
+        iterr = self.iter_timeline(account_name, lim=lim, **y)
+        return PostList(iterr, lim=lim)
     
 
 

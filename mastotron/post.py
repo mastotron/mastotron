@@ -41,8 +41,8 @@ class PostModel(DictModel):
         if not self.out(REL_GRAPHTIME):
             self.store_graphtime()
         
-        if not self.out(REL_READ_STATUS):
-            self.mark_unread()
+        # if not self.out(REL_READ_STATUS):
+            # self.mark_unread()
     
 
 
@@ -86,11 +86,16 @@ class PostModel(DictModel):
     
     @cached_property
     def copies(self):
-        return PostList(map(Post,self.incs(REL_IS_LOCAL_FOR)))
+        return PostList(self.incs(REL_IS_LOCAL_FOR))
     @cached_property
     def local(self):
         if self.is_local: return self
         if self.copies: return self.copies[0]
+    
+    @cached_property
+    def allcopies(self):
+        l=[self.source] + list(self.source.copies) + [self.in_boost_of]
+        return {x for x in l if x is not None and type(x) is PostModel}
     
     def get_local(self, server):
         copies = [p for p in self.source.copies if p.localserver==server]
@@ -145,30 +150,28 @@ class PostModel(DictModel):
     
     @cached_property
     def was_replied_to(self):
-        return map(Post,self.incs(REL_IS_REPLY_TO))
+        return PostList(self.incs(REL_IS_REPLY_TO))
 
     ##########
     # READ?? #
     ##########
 
     def mark_read(self):
-        TronDB().unrelate(self, NODE_READ_STATUS_IS_UNREAD, REL_READ_STATUS)
+        # for post in self.allcopies:
+        # TronDB().unrelate(self, NODE_READ_STATUS_IS_UNREAD, REL_READ_STATUS)
         TronDB().relate(self, NODE_READ_STATUS_IS_READ, REL_READ_STATUS)
-        if self.is_boost_of: self.is_boost_of.mark_read()
-        if self.is_local_for: self.is_local_for.mark_read()
     
     def mark_unread(self):
-        TronDB().unrelate(self, NODE_READ_STATUS_IS_READ, REL_READ_STATUS)
+        # for post in self.allcopies:
+        # TronDB().unrelate(self, NODE_READ_STATUS_IS_READ, REL_READ_STATUS)
         TronDB().relate(self, NODE_READ_STATUS_IS_UNREAD, REL_READ_STATUS)
-        if self.is_boost_of: self.is_boost_of.mark_unread()
-        if self.is_local_for: self.is_local_for.mark_unread()
     
     @property
     def is_read(self):
-        nstatus=self.is_read_indb
-        if nstatus is not None: return nstatus == NODE_READ_STATUS_IS_READ
-        if self.is_boost_of: return self.is_boost_of.is_read
-        if self.is_local_for: return self.is_local_for.is_read
+        for post in self.allcopies:
+            nstatus=post.out(REL_READ_STATUS)
+            if nstatus is not None:
+                return nstatus == NODE_READ_STATUS_IS_READ
     
     
 
@@ -245,94 +248,6 @@ class PostModel(DictModel):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-    def _get_posts_abovebelow(self, pre=True, as_list=True):
-        try:
-            _pre,_post=self.status_context
-            l=[Post(d.get('url'), **d) for d in (_pre if pre else _post)]
-        except Exception as e:
-            log.error(e)
-            l=[]
-        return PostList(l) if not as_list else l
-
-    @cache
-    def get_posts_above(self, as_list=True):
-        return self._get_posts_abovebelow(pre=True, as_list=as_list)
-    @cache
-    def get_posts_below(self, as_list=True):
-        return self._get_posts_abovebelow(pre=False, as_list=as_list)
-    
-    @cached_property
-    def above(self):
-        return self.get_posts_above(as_list=False)
-    
-    @cached_property
-    def below(self): 
-        return self.get_posts_below(as_list=False)
-
-    @cached_property
-    def context(self):
-        return self.get_context(
-            as_list=False,
-            recurse=0,
-            interrelate=False,
-            progress=True
-        )
-    
-    @cached_property
-    def thread(self):
-        return self.get_context(
-            as_list=False,
-            recurse=0,
-            interrelate=True,
-            progress=False
-        )
-    
-    
-
-    
-    @cache
-    def get_context_op(self):
-        return self.op.get_context() if self.op != self else []
-
-
-    def iter_context(self, recurse=0, progress=False, lim=None,**kwargs):
-        done=set()
-
-        def postiter():
-            yield from reversed(self.get_posts_above())
-            yield self
-            yield from self.get_posts_below()
-        iterr=postiter()
-        if progress: iterr=tqdm(iterr, desc='Iterating context')        
-        for post in iterr:
-            if post!=self and post not in done:
-                done.add(post)
-                yield post
-                if lim and len(done)>=lim: break
-        
-        
-
-    def get_context(self, as_list=True, recurse=0, interrelate=False, progress=False, lim=None):
-        posts=list(self.iter_context(recurse=recurse, progress=progress,lim=lim))
-        if interrelate: self.interrelate(posts=posts)
-        return PostList(posts) if not as_list else posts
-
     @cached_property
     def status_context(self):
         from .mastotron import Tron
@@ -357,50 +272,39 @@ class PostModel(DictModel):
         pre,post=self.status_context
         return dict((d.get(key),d) for d in pre+post)
 
-    @cached_property
+    @property
     def is_reply_to_status(self):
         o={}
         if self.is_reply and self.in_reply_to_id:
             o=self.status_context_d().get(self.in_reply_to_id)
             if not o:
                 pre,post=self.status_context
-                o=pre[-1]
+                if pre:
+                    o=pre[-1]
         return o
 
 
+    def iter_context(self):
+        posts_pre,posts_post = self.status_context
+        def yield_dicts():
+            yield from reversed(posts_pre)
+            yield from posts_post
+        def yield_posts():
+            yield self
+            for d in yield_dicts(): 
+                post = Post(d.get('url'), **d)
+                yield post
+        yield from yield_posts()
 
+    def iter_contexts(self,**kwargs):
+        for post in self.allcopies:
+            yield from post.iter_context(**kwargs)
 
+    def get_context(self, lim=None, **kwargs):
+        return PostList(self.iter_contexts(**kwargs), lim=lim)
 
-    @cache
-    def get_context_d(self, recurse=0):
-        posts = self.get_context(recurse=recurse, as_list=True, interrelate=False)
-        return dict((post._id, post) for post in posts)
-
-    def interrelate(self, 
-            posts = None, 
-            recurse=0, 
-            force=False, 
-            progress=False, 
-            **kwargs):
-        
-        if force or not self._related:
-            if not posts: 
-                posts = self.get_context(
-                    recurse=recurse, 
-                    interrelate=False
-                )
-            
-            iterr = posts if not progress else tqdm(
-                posts,
-                desc='Relating context'
-            )
-            for post in iterr: 
-                post.get_is_reply_to(force=force)
-            
-            self._related=True
-    
-    
-
+    @cached_property
+    def context(self): return self.get_context()
 
 
     def relate(self, post2, rel):
@@ -411,7 +315,7 @@ class PostModel(DictModel):
     def incs(self, rel): return TronDB().get_rels_inc(self,rel)
     def out(self, rel): return TronDB().get_rel_out(self,rel)
     def outs(self, rel): return TronDB().get_rels_out(self,rel)
-    def all(self, rel): return self.inc(rel) + self.out(rel)
+    def alls(self, rel): return self.incs(rel) + self.outs(rel)
     
     def rels_exist(self):
         v=TronDB().gdb.v(self._id)
@@ -424,6 +328,13 @@ class PostModel(DictModel):
     @cached_property
     def replies(self):
         return PostList(self.was_replied_to)
+
+    @cached_property
+    def convo(self):
+        return self.context + self.reply_chain
+        # self.get_context()
+        # return PostList([self] + [self.is_reply_to] + self.was_replied_to) + self.reply_chain
+    
 
     @cached_property
     def op(self):
@@ -586,7 +497,7 @@ class PostModel(DictModel):
     def node_data(post):
         odx={}
         odx['_id'] = post._id
-        odx['id']=post.url if post.url else post.uri
+        odx['id'] = post._id
         odx['html'] = post.get_html(allow_embedded=False)
         odx['shape'] = 'circularImage' # if not same_author else 'box'
         odx['image'] = post.author.avatar

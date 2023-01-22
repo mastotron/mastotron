@@ -3,7 +3,6 @@ from .imports import *
 class PostNet:
     def __init__(self, posts):
         from .postlist import PostList
-        
         self.posts = (
             PostList(posts)
             if type(posts)!=PostList
@@ -29,18 +28,21 @@ class PostNet:
                 eopts['from']=n1id
                 eopts['to']=n2id
                 g.add_edge(n1id, n2id, **eopts)
+                print('add edge!',n1id,n1id)
             return (n1id,n2id)
 
         def add_post(post):
-            if post.is_boost:
-                if post.is_boost_of and post.is_boost_of.is_valid:
-                    add_post(post.is_boost_of)
-            elif post.is_valid:
-                ensure_node(post)
-                if post.is_reply:
-                    if post.is_reply_to and post.is_reply_to.is_valid:
-                        add_post(post.is_reply_to)
-                        ensure_edge(post, post.is_reply_to, rel='replied_to')
+            if post.is_boost_of:
+                return add_post(post.is_boost_of)
+            
+            pid=ensure_node(post)
+            print('pid',pid)
+            if post.is_reply_to:
+                ensure_edge(post, post.is_reply_to)
+
+            if post.replies:
+                for post2 in post.replies:
+                    ensure_edge(post2, post, rel='replied_to')
         
         for post in self.posts: add_post(post)
         
