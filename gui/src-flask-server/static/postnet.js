@@ -9,7 +9,7 @@ var darktxtcolor = 'white';
 var lighttxtcolor = 'black';
 var darkimg = "/static/dark-mode-6682-inv.png";
 var lightimg = "/static/dark-mode-6682.png";
-var limnodesgraph = 25;
+var limnodesgraph = 50;
 if (DARKMODE==1) { 
   var txtcolor = darktxtcolor; 
 } else { 
@@ -68,7 +68,7 @@ var options = {
     improvedLayout:true,
     clusterThreshold: 150,
     hierarchical: {
-      enabled:false,
+      enabled:true,
       levelSeparation: 150,
       nodeSpacing: 25,
       treeSpacing: 50,
@@ -82,7 +82,7 @@ var options = {
   },
 
   physics:{
-    enabled: true,
+    enabled: false,
     barnesHut: {
       // theta: 0.5,
       // gravitationalConstant: -3000,
@@ -109,14 +109,14 @@ var options = {
       damping: 0.09
     },
     hierarchicalRepulsion: {
-      centralGravity: 5,
+      centralGravity: 2,
       springLength: 200,
       springConstant: 100,
-      nodeDistance: 150,
+      nodeDistance: 100,
       damping: 1,
       avoidOverlap: 1
     },
-    maxVelocity: 5,
+    maxVelocity: 10,
     minVelocity: .1,
     solver: 'hierarchicalRepulsion',
     stabilization: {
@@ -246,6 +246,7 @@ function del_node(node_id, recursive = true) {
 function del_nodes(node_ids) {
   if (node_ids.length>0) {
     socket.emit('mark_as_read',node_ids);
+    freeze_nodes();
     nodes.remove(node_ids);
     // style_nodes();
   }
@@ -296,6 +297,7 @@ function update_nodes(data) {
   fix_nodes();
   nodes.update(data.nodes);
   edges.update(data.edges);
+  // repos_nodes();
   fix_nodes();
   style_edges();
   lim_nodes();
@@ -310,9 +312,22 @@ function sleep(ms) {
 function fix_nodes() {
   iter_nodes().forEach(function(n){
     nd=nodes.get(n.id);
+    // nd['x']=n.x;
+    // nd['y']=n.y;
+    // nd['fixed']={x:false,y:false}
+    // console.log(nd.x, nd.y, n.x, n.y,nd.fixed);
+    // nodes.update(nd);
+    // nd['fixed']={x:false,y:false}
+    // nodes.update(nd);
+  });
+}
+
+function freeze_nodes() {
+  iter_nodes().forEach(function(n){
+    nd=nodes.get(n.id);
     nd['x']=n.x;
     nd['y']=n.y;
-    // nd['fixed']={x:true,y:true}
+    nd['fixed']={x:true,y:true}
     // console.log(nd.x, nd.y, n.x, n.y,nd.fixed);
     // nodes.update(nd);
     // nd['fixed']={x:false,y:false}
@@ -325,16 +340,16 @@ function fix_nodes() {
 function style_edges() {
   for (edge of iter_edges()) {
     edge_d = edges.get(edge.id);
-    if (edge_d.edge_type=='in_boost_of') {
+    if (edge_d.edge_type=='posted') {
       edge.options.arrows.to.type = 'circle';
       edge.options.arrows.from.type = 'circle';
-      // edge.options.arrows.to.enabled = true;
-      // edge.options.arrows.from.enabled = false;
+      edge.options.arrows.to.enabled = false;
+      edge.options.arrows.from.enabled = false;
     } else {
       edge.options.arrows.to.type = 'arrow';
       edge.options.arrows.from.type = 'bar';
-      // edge.options.arrows.to.enabled = true;
-      // edge.options.arrows.from.enabled = false;
+      edge.options.arrows.to.enabled = true;
+      edge.options.arrows.from.enabled = false;
     }
   }
 }
@@ -497,18 +512,17 @@ network.on("stabilizationIterationsDone", function(obj) {
 
 network.on("click", function (_params) {
   node_d = get_node(_params);
-  console.log('clicked:', node_d);
+  // console.log('clicked:', node_d.id);
   if (node_d == undefined) {
     hide_status_div();
   } else {
     node_id = node_d.id;
     e = _params.event.srcEvent;
-    if (e.ctrlKey | e.metaKey) {
+    // if (e.ctrlKey | e.metaKey) {
+    if (MODE=='markread') {
       console.log('del node!',node_id);
       del_node(node_id);
-    } else if (e.altKey & e.shiftKey) {
-      add_full_context(node_id);
-    } else if (e.altKey) {
+    } else if (MODE=='getcontext') {
       add_context(node_id);
     }
   }
@@ -561,7 +575,7 @@ $(document).ready(function(){
   
   
   setInterval(function() { socket.emit('get_pushes'); }, 1 * 1000);
-  setInterval(function() { fix_nodes(); }, 100);
+  // setInterval(function() { fix_nodes(); }, 100);
   setInterval(function() { request_updates(); }, 30 * 1000);
 
   if (DARKMODE == 1) { set_dark_mode(); } else { set_light_mode(); }
@@ -591,35 +605,56 @@ function set_mode_default() {
   }
 }
 
+function toggle_mode_read() {
+  if (MODE=='markread') {
+    set_mode_default();
+  } else {
+    set_mode_markread();
+  }
+}
+function toggle_mode_info() {
+  if (MODE=='getcontext') {
+    set_mode_default();
+  } else {
+    set_mode_getcontext();
+  }
+}
+
 
 $(document).on('keydown', function (event) {
   console.log(event);
-  if ((event.which == 8) | (event.which==88) | (event.which==82)) { // backspace or x
+  if (event.which==27) {
+    set_mode_default();
+    network.unselectAll();
+    hide_status_div();
+  } else if ((event.which==88) | (event.which==82)) { // backspace or x
       // del_nodes(network.getSelectedNodes());
       network.getSelectedNodes().forEach(function(n){
         console.log(n);
         del_node(n);
       })
   } else if (event.ctrlKey | event.metaKey) {
-    console.log(event);
+    // console.log(event);
     if (event.which == 65) { // a (select all)
       event.preventDefault();
       node_ids = [];
       iter_nodes_d().forEach(function(nd){node_ids.push(nd.id)});
       network.selectNodes(node_ids);
     } else {
-      set_mode_markread();
+      // set_mode_markread();
+      toggle_mode_read();
     }
   } else if (event.altKey) {
-    set_mode_getcontext();
-  } else {
-    set_mode_default()
-  }   
+    toggle_mode_info();
+  }
+  // } else {
+    // set_mode_default()
+  // }   
 });
 
-$(document).on('keyup', function (event) {
-  set_mode_default();
-});
+// $(document).on('keyup', function (event) {
+  // set_mode_default();
+// });
 
 
 
@@ -698,7 +733,7 @@ function repos_nodes(
       if(new_score_xy & new_time_xy) {
         nd['x'] = new_score_xy;
         nd['y'] = new_time_xy;
-        // nd['fixed'] = {x: false, y: false};
+        nd['fixed'] = {x: false, y: true};
         // console.log([nd.score, nd.timestamp], [nd.x, nd.y]);
         // console.log('node',nd.id,'has NEW x,y of',nd.x,nd.y,'with sorted',score,timestamp);
         ndl.push(nd);

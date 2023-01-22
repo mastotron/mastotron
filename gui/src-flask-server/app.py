@@ -82,6 +82,7 @@ class NodeListener(StreamListener):
 
 @socketio.event
 def start_updates(data={}):
+    return
     global seen_posts, STARTED
     seen_posts = set()
     if not STARTED:
@@ -103,12 +104,12 @@ def get_pushes(data={}):
 @socketio.event
 def get_updates(data={}):
     acct = get_acct_name()
-    lim = data.get('lim', 50)
+    lim = data.get('lim', LIMNODES)
     if not acct: return
     
     def iterposts():
         yield from Tron().timeline_iter(acct, timeline_type='home', unread_only=True, lim=lim)
-        yield from Tron().latest_iter(mins_ago=60 * 24, unread_only=True)
+        # yield from Tron().latest_iter(mins_ago=60 * 24, unread_only=True)
     
     posts_sent = []
     for i,post in enumerate(iterposts()):
@@ -122,8 +123,8 @@ def get_updates(data={}):
         )
         if pdata: posts_sent.append(post)
     
-    for post in posts_sent:
-        add_post(post, with_context=True, with_context_recurse=1, send_data=True)
+    # for post in posts_sent:
+        # add_post(post, with_context=True, with_context_recurse=1, send_data=True)
 
 
 @socketio.event
@@ -160,10 +161,10 @@ def mark_as_read(node_ids):
 
     
     
-def get_node_data(post, last_post = None):
-    same_author = last_post and last_post.author == post.author
+def get_post_data(post):
 
     odx={}
+    odx['id']=post._id
     odx['html'] = post.get_html(
         allow_embedded=False, 
         server=get_srvr_name()
@@ -181,88 +182,147 @@ def get_node_data(post, last_post = None):
 
     return odx
 
+def get_poster_data(post):
+    odx=get_post_data(post)
+    odx['id']=post.author._id
+    odx['shape'] = 'image'
+    odx['html'] = post.author._repr_html_()
+    odx['label'] = post.author.display_name
+    return odx
+
+def get_edge_data(obj1, obj2, rel, **kwargs):
+    return { 
+        'id':f'{obj1._id}__{rel}__{obj2._id}',
+        'from':obj1._id,
+        'to':obj2._id, 
+        'edge_type':rel,
+        **kwargs
+    }
 
 
-def add_post(post, with_context = False, with_context_recurse=0, with_context_progress=False,
-        send_data=True, with_context_lim=10):
-    global seen_posts
-    # seen_posts = set()
+def send_update(nodes=[], edges=[]):
+    odata=dict(nodes=nodes, edges=edges)
+    emit('get_updates', odata)
+    return odata
 
-    if not post: return
-    try:
-        post = Post(post) if type(post)==str else post
-    except Exception as e:
-        print(f'!! {e} !!')
-        return
+
+def add_post(post, unread_only=False, with_context=False, send_data=True, **kwargs):
+    if not post or not post.is_valid: return
+    nodes,edges=[],[]
+    if post.is_boost: 
+        add_post(post.in_boost_of)
+    else:
+        nodes += [get_post_data(post)]
+        
+        if post.is_reply and post.in_reply_to and post.in_reply_to.is_valid:
+            nodes += [get_post_data(post.in_reply_to)]
+            edges += [get_edge_data(post, post.in_reply_to, rel='in_reply_to')]
+
+
+            if post.in_reply_to.is_reply:
+                add_post(post.in_reply_to)
+        
+
+    if (nodes or edges) and send_data:
+        send_update(nodes=nodes,edges=edges)
     
-    nodes = []
-    edges = []
+    return dict(nodes=nodes,edges=edges)
+    
 
-    if post.is_valid and post.author.is_valid and not post.is_read:
-        if post in seen_posts: return
-        seen_posts.add(post)
 
-        
-        # nodes.append({'id':post.author._id, **post.author.node_data})
-        
-        # if not post.in_reply_to or post.in_reply_to.author != post.author:
-            # edges.append({'id':post._id+'__'+post.author._id, 'from':post.author._id, 'to':post._id})
+# def add_reply(post):
+    
 
-        
-        if post.in_reply_to and post.in_reply_to.is_valid and not post.in_reply_to.is_read: 
-            nodes.append({'id':post._id, **get_node_data(post)})
-            nodes.append({'id':post.in_reply_to._id, **get_node_data(post.in_reply_to, post)})
-            same_author = post.author == post.in_reply_to.author
-            # print(post.author, post.in_reply_to.author, same_author)
-            edges.append({ 
-                'id':f'{post._id}__in_reply_to__{post.in_reply_to._id}',
-                'from':post.in_reply_to._id if 0 else post._id,
-                'to':post._id if 0 else post.in_reply_to._id, 
-                # 'label':'↩️',
-                'edge_type':'in_reply_to',
-                'is_same_author':same_author
-            })
-        
-        elif post.in_boost_of and post.in_boost_of.is_valid and not post.in_boost_of.is_read: 
-            # add_post(post.in_boost_of)
-            # nodes.append({'id':post._id, **get_node_data(post)})
-            nodes.append({'id':post.in_boost_of._id, **get_node_data(post.in_boost_of)})
 
-            # edges.append({
-            #     'id':f'{post._id}__in_boost_of__{post.in_boost_of._id}',
-            #     'from':post._id, 
-            #     'to':post.in_boost_of._id,
-            #     # 'label':'🔁',
-            #     'edge_type':'in_boost_of',
-            #     'is_same_author':post.author == post.in_boost_of.author
-            # })
+# def add_author(post, send_data=True):
+#     nodes=[{'id':post.author._id, **get_poster_data(post)}]
+#     edges=[{ 
+#         'id':f'{post.author._id}__posted__{post._id}',
+#         'from':post.author._id,
+#         'to':post._id, 
+#         'edge_type':'posted',
+#         'is_same_author':None
+#     }]
+#     odata=dict(nodes=nodes,edges=edges)
+#     if send_data: emit('get_updates', odata)
+#     return odata
+
+
+# def add_post(post, with_context = False, with_context_recurse=0, with_context_progress=False,
+#         send_data=True, with_context_lim=10):
+#     if not post: return
+#     try:
+#         post = Post(post) if type(post)==str else post
+#     except Exception as e:
+#         print(f'!! {e} !!')
+#         return
+    
+#     nodes = []
+#     edges = []
+
+#     if post.is_valid and post.author.is_valid and not post.is_read:
+#         add_author=True
+
+#         ## REPLY?        
+#         if post.in_reply_to and post.in_reply_to.is_valid and not post.in_reply_to.is_read: 
+#             nodes.append({'id':post._id, **get_node_data(post)})
+#             nodes.append({'id':post.in_reply_to._id, **get_node_data(post.in_reply_to, post)})
+#             # print(post.author, post.in_reply_to.author, same_author)
+#             same_author = post.author == post.in_reply_to.author
+#             edges.append({ 
+#                 'id':f'{post._id}__in_reply_to__{post.in_reply_to._id}',
+#                 'from':post.in_reply_to._id if 0 else post._id,
+#                 'to':post._id if 0 else post.in_reply_to._id, 
+#                 # 'label':'↩️',
+#                 'edge_type':'in_reply_to',
+#                 'is_same_author':same_author
+#             })
         
-        elif not post.is_reply and not post.is_boost:
-            nodes.append({'id':post._id, **get_node_data(post)})
+#         elif post.in_boost_of and post.in_boost_of.is_valid and not post.in_boost_of.is_read: 
+#             add_author=False
+#             # add_post(post.in_boost_of)
+#             # nodes.append({'id':post._id, **get_node_data(post)})
+#             nodes.append({'id':post.in_boost_of._id, **get_node_data(post.in_boost_of)})
+
+#             # edges.append({
+#             #     'id':f'{post._id}__in_boost_of__{post.in_boost_of._id}',
+#             #     'from':post._id, 
+#             #     'to':post.in_boost_of._id,
+#             #     # 'label':'🔁',
+#             #     'edge_type':'in_boost_of',
+#             #     'is_same_author':post.author == post.in_boost_of.author
+#             # })
         
-        if nodes or edges:
-            odata = dict(nodes=nodes, edges=edges)
-            if with_context:
-                context = post.get_context(
-                    recurse=with_context_recurse, 
-                    progress=with_context_progress
-                )
+#         elif not post.is_reply and not post.is_boost:
+#             nodes.append({'id':post._id, **get_node_data(post)})
+        
+#         if nodes or edges:
+#             if add_author:
                 
-                for i,post2 in enumerate(tqdm(context)):
-                    if i>=with_context_lim: break
-                    post2_odata = add_post(
-                        post2, 
-                        with_context=False,
-                        send_data=False
-                    )
-                    if post2_odata and (post2_odata.get('nodes') or post2_odata.get('edges')):
-                        odata = {
-                            'nodes':(odata['nodes'] + post2_odata.get('nodes',[])),
-                            'edges':(odata['edges'] + post2_odata.get('edges',[]))
-                        }
 
-            if send_data and odata: emit('get_updates', odata)
-            return odata
+#             odata = dict(nodes=nodes, edges=edges)
+#             if with_context:
+#                 context = post.get_context(
+#                     recurse=with_context_recurse, 
+#                     progress=with_context_progress
+#                 )
+                
+#                 for i,post2 in enumerate(tqdm(context)):
+#                     if i>=with_context_lim: break
+#                     add_post(
+#                         post2, 
+#                         with_context=False,
+#                         send_data=send_data
+#                     )
+#                     # if post2_odata and (post2_odata.get('nodes') or post2_odata.get('edges')):
+#                     #     if not send_data:
+#                     #         odata = {
+#                     #             'nodes':(odata['nodes'] + post2_odata.get('nodes',[])),
+#                     #             'edges':(odata['edges'] + post2_odata.get('edges',[]))
+#                     #         }
+
+#             if send_data and odata: emit('get_updates', odata)
+#             return odata
 
 
 

@@ -13,9 +13,9 @@ def post_to_html(self, allow_embedded = True, url=None, **y):
     austr=f'<img class="post_avatarimg" src="{self.author.avatar}" width="50px" height="50px" /><a href="{self._id}" target="_blank">{self.author.display_name}</a> ({self.author.followers_count:,} 👥)'
     imgs_urls = [d.get('preview_url') for d in self.media_attachments] if self.media_attachments else []
     imgs_str = "    ".join([
-        f'<a href="{url}" target="_blank"><img class="post_postimg" src="{url}" /></a>'
-        for url in imgs_urls
-        if url
+        f'<a href="{xurl}" target="_blank"><img class="post_postimg" src="{xurl}" /></a>'
+        for xurl in imgs_urls
+        if xurl
     ])
     imgs_str=f'<center>{imgs_str}</center>' if imgs_str else ''
 

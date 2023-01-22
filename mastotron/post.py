@@ -32,7 +32,7 @@ class PostModel(DictModel):
 
     @property
     def is_valid(self):
-        return bool(self._id)
+        return bool(self._id) and bool(self.author) and bool(self.author._id)
 
     @cached_property
     def server(self):
@@ -258,8 +258,38 @@ class PostModel(DictModel):
             if above:
                 post = above[-1]
         return post
-    
 
+
+    @property
+    def db(self):
+        from .db import TronDB
+        return TronDB()
+    @property
+    def gdb(self):
+        from .db import TronDB
+        return TronDB().gdb
+
+    def relate(self, post2, rel):
+        from .db import TronDB
+        return self.db.relate(self, post2, rel)
+    
+    def relations_out(self, rel):
+        return [Post(d.get('id')) for d in self.gdb.v(self._id).out(rel).all().get('result') if d.get('id')]
+    def relations_inc(self, rel):
+        return [Post(d.get('id')) for d in self.gdb.v(self._id).inc(rel).all().get('result') if d.get('id')]
+    def relations(self, rel):
+        return self.relations_out(rel) + self.relations_inc(rel)
+
+    
+    @property
+    def source(self):
+        l=self.relations_out(REL__IS_LOCAL_COPY_OF)
+        return l[0] if l else None
+    
+    @property
+    def copies(self):
+        l=self.relations_inc(REL__IS_LOCAL_COPY_OF)
+        return l if l else []
 
     @property
     def replies(self):
@@ -275,12 +305,9 @@ class PostModel(DictModel):
 
     def get_html(self, allow_embedded=False, server=None):
         from .htmlfmt import post_to_html
-        local_url=self.get_url_local(server)
-        print('local_url',local_url)
         return post_to_html(
             self, 
             allow_embedded=allow_embedded,
-            url=local_url if server else None
         )
     
     @property
@@ -386,9 +413,21 @@ class PostModel(DictModel):
         TronDB().set_post(self.data)
         # TronDB().gdb.updatej(data)
 
-    def mark_read(self):
+    def mark_read(self, in_copies=True, in_source=True):
+        # save in self
+        print(f'I {self} am currently of read status {self._data.get("is_read")}')
         self._data['is_read']=True
         self.save()
+        
+        if in_source:
+            source=self.source
+            if source:
+                source.mark_read(in_copies=False, in_source=False)
+        
+        if in_copies:
+            for c in self.copies:
+                c.mark_read(in_copies=False, in_source=False)
+    
     def mark_unread(self):
         self._data['is_read']=False
         self.save()
@@ -404,13 +443,15 @@ class PostModel(DictModel):
 
     @cached_property
     def data(self):
-        return {
+        od={
             **self.data_default,
             **self._data,
             **{'timestamp':self.timestamp},
             **{f'score_{k}':v for k,v in self.scores.items()},
             **{'_id':self._id},
         }
+        # if self.source: od={**od, **self.source.data}
+        return od
 
     @cached_property
     def node_data(self):

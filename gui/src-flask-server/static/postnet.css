@@ -47,8 +47,8 @@ width:  99vw; /* For 100% screen width */
 }
 #tweet { 
     position: absolute;
-    top: 5vh;
-    right: 5vh;
+    top: 30px;
+    left: 20px;
     /* min-width:300px; */
     /* max-width: 400px; */
     width: 400px;

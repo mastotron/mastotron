@@ -130,7 +130,7 @@ class Mastotron():
         
         
 
-    def post(self, url_or_uri, **post_d):
+    def post_orig(self, url_or_uri, **post_d):
         post = None
         if not url_or_uri: return
 
@@ -173,6 +173,43 @@ class Mastotron():
             self._posts[uri] = post
 
         return post
+
+    def post(self, url_or_uri, **post_d):
+        uri=url_or_uri
+        if not uri: return
+        post = None
+        # if cached
+        if uri in self._posts: return self._posts[uri]
+
+        # get from db?
+        db = TronDB()
+        post_from_db = db.get_post(uri)
+        if post_from_db: 
+            log.debug(f'getting {uri} from trondb')
+            post = PostModel({**post_from_db, **post_d})
+
+        if not post:
+            # get from status?
+            if not post_d: # ok to trust custom dicts ?
+                post_d = self.status(uri)
+            
+            if post_d: 
+                log.debug('saving post_d into trondb')
+                post = PostModel({**post_d, '_id':uri})
+                db.set_post(post.data)
+
+                ## uri2?
+                uri2 = post._data.get('url') if post._data.get('url') else post._data.get('uri')
+                if uri2 != uri:
+                    # preload this
+                    post2=self.post(uri2)
+                    # pre-relate
+                    if post and post2: post.relate(post2,REL__IS_LOCAL_COPY_OF)
+
+        if post:
+            self._posts[uri] = post
+
+        return post
             
 
     def status_context(self, uri):
@@ -207,10 +244,11 @@ class Mastotron():
         uris = [row['uri'] for row in self.db.all()[-n:]]
         return PostList([self.post(uri) for uri in uris])
     
-    def timeline_iter(self, account_name, timeline_type='local', unread_only=True, lim=50, lim_iter=5):
+    def timeline_iter(self, account_name, timeline_type='home', unread_only=True, lim=50, lim_iter=5):
+        un,server=parse_account_name(account_name)
         api = self.api_user(account_name)
         try:
-            timeline = api.timeline(timeline=timeline_type)
+            timeline = api.timeline(timeline=timeline_type, local=False, remote=False)
             num_yielded = 0
             num_looped = 0
             while timeline:
@@ -218,14 +256,9 @@ class Mastotron():
                 if num_looped>lim_iter: break
 
                 for post_d in timeline:
-                    pprint(post_d)
-                    stopx
-                    # uri = to_uri(post_d.url if post_d.url else post_d.uri)
-                    uri = post_d.url if post_d.url else post_d.uri
-                    print('uri!!',uri)
-                    if uri:# and uri not in seen_urls:
-                        # seen_urls.add(uri)
-                        post = self.post(uri, **dict(post_d))
+                    iduri = f"https://{server}/@{post_d.get('account').get('acct')}/{post_d.get('id')}"
+                    if iduri:
+                        post = self.post(iduri, **dict(post_d))
                         if post: 
                             if not unread_only or not post.is_read:
                                 yield post

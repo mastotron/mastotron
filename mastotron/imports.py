@@ -1,3 +1,7 @@
+REL__IS_LOCAL_COPY_OF='is_local_copy_of'
+LIMNODES=50
+
+
 import os,sys; sys.path.insert(0,'..')
 from pprint import pprint, pformat
 import numpy as np
