@@ -157,3 +157,29 @@ def find_localremote_url(url1,url2):
     urls = [url1,url2]
     urls.sort(key=lambda x: -x.count('@'))
     return tuple(urls)
+
+
+
+
+def get_datetime_str():
+    return str(dt.datetime.now()).split('.',1)[0]
+def get_time_str():
+    return str(dt.datetime.now()).split('.',1)[0].split()[-1]
+
+def get_graphtime_str(timestamp=None, minute_blur=GRAPHTIME_ROUNDBY):
+    now=get_now(timestamp)
+    minute=now.minute // minute_blur * minute_blur
+    return f'{now.year:04}-{now.month:02}-{now.day:02} {now.hour:02}:{minute:02}'
+    
+def get_now(timestamp=None):
+    return (
+        dt.datetime.fromtimestamp(timestamp) 
+        if timestamp
+        else dt.datetime.now()
+    )
+
+def iter_graphtimes(timestamp=None, by=GRAPHTIME_ROUNDBY):
+    current_time = get_now(timestamp)
+    while True:
+        yield get_graphtime_str(timestamp=current_time.timestamp())
+        current_time -= dt.timedelta(minutes=GRAPHTIME_ROUNDBY)

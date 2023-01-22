@@ -114,12 +114,6 @@ def get_updates(data={}):
     )
         
 
-def get_datetime_str():
-    import datetime as dt
-    return str(dt.datetime.now()).split('.',1)[0]
-def get_time_str():
-    import datetime as dt
-    return str(dt.datetime.now()).split('.',1)[0].split()[-1]
 
 def update_posts(tl, omsg='refreshed', emit_key='get_updates',ids_done=None):
     if len(tl):

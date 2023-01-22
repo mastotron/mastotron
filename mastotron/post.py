@@ -3,7 +3,7 @@ from .postlist import PostList
 from .htmlfmt import to_html
 from .db import TronDB
 
-in_reply_to_uri_key = 'in_reply_to__id'
+is_reply_to_uri_key = 'is_reply_to__id'
 
 def Post(url_or_uri_x, **post_d):
     if not url_or_uri_x: return
@@ -28,23 +28,155 @@ class PostModel(DictModel):
 
     def __gt__(self, other):
         return self.timestamp > other.timestamp
+    
+    def __str__(self): return self._id
+    def __repr__(self): return f"Post('{self._id}')"
+    def _repr_html_(self): return self.html
+
+    ############
+    ### BOOT ###
+    ############
 
     def boot(self):
-        if self._id and self.urli and self._id != self.urli:
-            self.set_is_copy_of(self.urli)
-        return self
+        if not self.out(REL_GRAPHTIME):
+            self.store_graphtime()
+        
+        if not self.out(REL_READ_STATUS):
+            self.mark_unread()
+    
+
+
+    ############
+    ### TIME ###
+    ############
+
+    @cached_property
+    def graphtime(self):
+        return get_graphtime_str(self.timestamp)
+    @property
+    def graphtime_iter(self):
+        yield from iter_graphtimes(self.timestamp)
+    
+    @property
+    def graphtime_indb(self):
+        return self.out(REL_GRAPHTIME)
+    def store_graphtime(self):
+        if not self.graphtime_indb:
+            TronDB().relate(self, self.graphtime, REL_GRAPHTIME)
+
+    #############
+    ### LOCAL ###
+    #############
+
+    @cached_property
+    def is_local_for(self):
+        if self.is_local:
+            out = Post(self.out(REL_IS_LOCAL_FOR))
+            if not out:
+                out = Post(self.urli, **self._data)
+                self.relate(out,REL_IS_LOCAL_FOR)
+            return out
+
+    @cached_property
+    def source(self):
+        return self.is_local_for if self.is_local_for else self
+    @property
+    def is_source(self):
+        return self.source == self
+    
+    @cached_property
+    def copies(self):
+        return PostList(map(Post,self.incs(REL_IS_LOCAL_FOR)))
+    @cached_property
+    def local(self):
+        if self.is_local: return self
+        if self.copies: return self.copies[0]
+    
+    def get_local(self, server):
+        copies = [p for p in self.source.copies if p.localserver==server]
+        return copies[0] if copies else None
+
+    @property
+    def localsource(self):
+        if self.local: return self.local
+        return self.source
+    def get_localsource(self, server):
+        copies = [p for p in self.source.copies if p.localserver==server]
+        return copies[0] if copies else self.source
+    
+    
+    #############
+    ### BOOST ###
+    #############
+    
+    @cached_property
+    def is_boost_of(self):
+        if self.is_boost:
+            out = Post(self.out(REL_IS_BOOST_OF))
+            if not out:
+                url = self.reblog.get('url')
+                out = Post(url, **dict(self.reblog))
+                self.relate(out,REL_IS_BOOST_OF)
+            return out
+
+    @cached_property
+    def was_boosted_by(self):        
+        if not self.is_boost:
+            return map(Post,self.incs(REL_IS_BOOST_OF))
+    
+
+
+    #############
+    ### REPLY ###
+    #############
+
+    @cached_property
+    def is_reply_to(self):
+        if self.is_reply:
+            out = Post(self.out(REL_IS_REPLY_TO))
+            if not out:
+                # otherwise let's get from context?
+                status_d = self.is_reply_to_status
+                url = status_d.get('url')
+                if status_d and url:
+                    out = Post(url, **status_d)
+                    self.relate(out, REL_IS_REPLY_TO)
+            return out
+    
+    @cached_property
+    def was_replied_to(self):
+        return map(Post,self.incs(REL_IS_REPLY_TO))
+
+    ##########
+    # READ?? #
+    ##########
+
+    def mark_read(self):
+        TronDB().unrelate(self, NODE_READ_STATUS_IS_UNREAD, REL_READ_STATUS)
+        TronDB().relate(self, NODE_READ_STATUS_IS_READ, REL_READ_STATUS)
+        if self.is_boost_of: self.is_boost_of.mark_read()
+        if self.is_local_for: self.is_local_for.mark_read()
+    
+    def mark_unread(self):
+        TronDB().unrelate(self, NODE_READ_STATUS_IS_READ, REL_READ_STATUS)
+        TronDB().relate(self, NODE_READ_STATUS_IS_UNREAD, REL_READ_STATUS)
+        if self.is_boost_of: self.is_boost_of.mark_unread()
+        if self.is_local_for: self.is_local_for.mark_unread()
+    
+    @property
+    def is_read(self):
+        nstatus=self.is_read_indb
+        if nstatus is not None: return nstatus == NODE_READ_STATUS_IS_READ
+        if self.is_boost_of: return self.is_boost_of.is_read
+        if self.is_local_for: return self.is_local_for.is_read
+    
+    
+
+
 
     @property
     def urli(self):
-        return self.url if self.url else self.uri
-
-    def set_is_copy_of(self, post_or_uri):
-        post=Post(post_or_uri)
-        if post:
-            self.relate(
-                post,
-                REL__IS_LOCAL_COPY_OF
-            )
+        return to_uri(self.url if self.url else self.uri)
 
     @property
     def is_valid(self):
@@ -53,6 +185,9 @@ class PostModel(DictModel):
     @cached_property
     def server(self):
         return parse_account_name(self.url)[-1]
+    @cached_property
+    def localserver(self):
+        return self._id.split('://',1)[-1].split('/')[0]
     @cached_property
     def un(self):
         return parse_account_name(self.url)[0]
@@ -107,20 +242,25 @@ class PostModel(DictModel):
     def poster_id(self):
         return self.author.account
         
-    @cached_property
-    def in_boost_of(self):
-        if self.reblog:
-            url = self.reblog.get('url')
-            if url:
-                post = Post(url, **dict(self.reblog))
-                if post:
-                    return post
 
 
-    def wider_context(self): return self.get_context(recurse=True)
-    def immediate_context(self): return self.get_context(recurse=False)
-    convo = immediate_context
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
     def _get_posts_abovebelow(self, pre=True, as_list=True):
         try:
             _pre,_post=self.status_context
@@ -186,19 +326,6 @@ class PostModel(DictModel):
                 yield post
                 if lim and len(done)>=lim: break
         
-        # for post in {x for x in done}:
-        #     if not lim or len(done)<lim:
-        #         post2_iter = post.iter_context(
-        #             recurse=recurse-1 if recurse>0 else 0,
-        #             progress=False,
-        #             lim=lim if not lim else lim-len(done),
-        #             **kwargs
-        #         )
-        #         for post2 in post2_iter:
-        #             if post2 not in done:
-        #                 done.add(post2)
-        #                 yield post2
-        #                 if lim and len(done)>=lim: break
         
 
     def get_context(self, as_list=True, recurse=0, interrelate=False, progress=False, lim=None):
@@ -209,15 +336,40 @@ class PostModel(DictModel):
     @cached_property
     def status_context(self):
         from .mastotron import Tron
-        from .postlist import PostList
+        tron = Tron()
 
-        res = Tron().status_context(self._id)
+        res = tron.status_context(self._id)
         if not res: return [], []
 
         posts_pre=res.get('ancestors',[])
         posts_post=res.get('descendants',[])
 
+        ## quick store?
+        for status_d in posts_pre+posts_post:
+            url = status_d.get('url')
+            tron.status(url, **status_d)
+            tron.status_context(url, **res)
+
         return posts_pre, posts_post
+
+    @cache
+    def status_context_d(self, key='id'):
+        pre,post=self.status_context
+        return dict((d.get(key),d) for d in pre+post)
+
+    @cached_property
+    def is_reply_to_status(self):
+        o={}
+        if self.is_reply and self.in_reply_to_id:
+            o=self.status_context_d().get(self.in_reply_to_id)
+            if not o:
+                pre,post=self.status_context
+                o=pre[-1]
+        return o
+
+
+
+
 
     @cache
     def get_context_d(self, recurse=0):
@@ -243,93 +395,58 @@ class PostModel(DictModel):
                 desc='Relating context'
             )
             for post in iterr: 
-                post.get_in_reply_to(force=force)
+                post.get_is_reply_to(force=force)
             
             self._related=True
     
     
 
 
-    @property
-    def in_reply_to(self):
-        return self.get_in_reply_to(force=False)
-    
-
-    def get_in_reply_to(self, force=False, save=True):
-        if not self.is_reply: return
-
-        if not force:    
-            reply_id_from_db = self._get_in_reply_to_id_from_gdb()
-            if reply_id_from_db: return Post(reply_id_from_db)
-
-        post = self._get_in_reply_to_from_context()
-        if post and save: self._set_in_reply_to_id_in_gdb(post)
-        
-        return post
-
-
-
-    def _get_in_reply_to_id_from_gdb(self):
-        log.debug('_get_in_reply_to_id_from_gdb')
-        return TronDB().get_relative(self, 'in_reply_to')
-    def _set_in_reply_to_id_in_gdb(self, post):
-        log.debug('_set_in_reply_to_id_in_gdb')
-        return TronDB().relate(self, post, 'in_reply_to')
-    
-    def _get_in_reply_to_from_context(self):
-        log.debug('_get_in_reply_to_from_context')
-        context_d = self.get_context_d()
-        post = context_d.get(self.in_reply_to_id)
-        if not post:
-            above = self.get_posts_above(as_list=True)
-            if above:
-                post = above[-1]
-        return post
-
-
-    @property
-    def db(self):
-        from .db import TronDB
-        return TronDB()
-    @property
-    def gdb(self):
-        from .db import TronDB
-        return TronDB().gdb
 
     def relate(self, post2, rel):
-        from .db import TronDB
-        return self.db.relate(self, post2, rel)
+        post2=Post(post2)
+        if post2 and rel: return TronDB().relate(self, post2, rel)
     
-    def relations_out(self, rel):
-        return [Post(d.get('id')) for d in self.gdb.v(self._id).out(rel).all().get('result') if d.get('id')]
-    def relations_inc(self, rel):
-        return [Post(d.get('id')) for d in self.gdb.v(self._id).inc(rel).all().get('result') if d.get('id')]
-    def relations(self, rel):
-        return self.relations_out(rel) + self.relations_inc(rel)
+    def inc(self, rel): return TronDB().get_rel_inc(self,rel)
+    def incs(self, rel): return TronDB().get_rels_inc(self,rel)
+    def out(self, rel): return TronDB().get_rel_out(self,rel)
+    def outs(self, rel): return TronDB().get_rels_out(self,rel)
+    def all(self, rel): return self.inc(rel) + self.out(rel)
+    
+    def rels_exist(self):
+        v=TronDB().gdb.v(self._id)
+        incs=v.inc().all().get('result')
+        outs=v.out().all().get('result')
+        return bool(incs) or bool(outs)
+    
 
-    
-    
-    @cached_property
-    def source(self):
-        l=self.relations_out(REL__IS_LOCAL_COPY_OF)
-        return l[0] if l else None
-    
-    @cached_property
-    def copies(self):
-        l=self.relations_inc(REL__IS_LOCAL_COPY_OF)
-        return l if l else []
 
     @cached_property
     def replies(self):
-        return PostList(Post(idx) for idx in [*set(self._data.get('replies_uri',[]))])
+        return PostList(self.was_replied_to)
 
     @cached_property
     def op(self):
-        if self.in_reply_to: return self.in_reply_to.op
+        if self.is_reply_to:
+            print(f'searching for OP in {self.is_reply_to}')
+            return self.is_reply_to.op
         return self
+
+
+    def iter_reply_chain(self):
+        yield self
+        if self.is_reply_to:
+            yield from self.is_reply_to.iter_reply_chain()
+    
+    @cached_property
+    def reply_chain(self):
+        return PostList(self.iter_reply_chain())
+    
+    @property
+    def unread_reply_chain(self):
+        return PostList(post for post in self.reply_chain if not post.is_read)
                     
-    def __repr__(self): return f"Post('{self._id}')"
-    def _repr_html_(self): return self.html
+    
 
     def get_html(self, allow_embedded=False, server=None):
         from .htmlfmt import post_to_html
@@ -340,24 +457,24 @@ class PostModel(DictModel):
     
     @property
     def num_reblogs(self):
-        if False: # self.is_boost and self.in_boost_of: 
-            res = self.in_boost_of.num_reblogs
+        if False: # self.is_boost and self.is_boost_of: 
+            res = self.is_boost_of.num_reblogs
         else:
             res = self.reblogs_count
         return res if res else 0
     
     @property
     def num_likes(self):
-        if False: #self.is_boost and self.in_boost_of: 
-            res = self.in_boost_of.num_likes
+        if False: #self.is_boost and self.is_boost_of: 
+            res = self.is_boost_of.num_likes
         else:
             res = self.favourites_count
         return res if res else 0
     
     @property
     def num_replies(self):
-        if False: #self.is_boost and self.in_boost_of: 
-            res = self.in_boost_of.num_replies
+        if False: #self.is_boost and self.is_boost_of: 
+            res = self.is_boost_of.num_replies
         else:
             res = self.replies_count
         return res if res else 0
@@ -368,6 +485,9 @@ class PostModel(DictModel):
     @property
     def is_reply(self):
         return self.in_reply_to_id is not None
+    @property
+    def is_local(self):
+        return self.urli != self._id
 
     @property
     def datetime_str(self):
@@ -436,37 +556,15 @@ class PostModel(DictModel):
 
     def save(self):
         # data = {str(k):str(v) for k,v in self.data.items()}
+        cache=self.cache
         from .db import TronDB
         # log.debug(f'saving: {self}')
         TronDB().set_post(self.data)
         # TronDB().gdb.updatej(data)
 
-    def mark_read(self):
-        # save in self
-        self._data['is_read']=True
-        self.save()
 
-        # save in boost
-        if self.is_boost and self.in_boost_of:
-            self.in_boost_of.mark_read()
+    
         
-        # save in source if any
-        if self.source:
-            self.source.mark_read()
-    
-    def mark_unread(self):
-        self._data['is_read']=False
-        self.save()
-    
-    @property
-    def is_read(self):
-        if self.is_boost and self.in_boost_of:
-            return self.in_boost_of.is_read
-        if self.source:
-            return self.source.is_read
-        return self._data.get('is_read', False)
-    
-
     
     @property
     def data_default(self):

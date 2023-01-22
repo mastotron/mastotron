@@ -161,7 +161,7 @@ Post ID: 109563512620764058
 
 ```python
 # the post and boosted post
-post, post.in_boost_of
+post, post.is_boost_of
 ```
 
 
@@ -232,7 +232,7 @@ Post ID: 109564459673004810
 
 ```python
 # the replied-to post
-post, post.in_reply_to
+post, post.is_reply_to
 ```
 
 
@@ -245,7 +245,7 @@ post, post.in_reply_to
 
 ```python
 # these can be chained
-Post(id=109564658606466762).in_reply_to.in_reply_to.in_reply_to.id == post.id
+Post(id=109564658606466762).is_reply_to.is_reply_to.is_reply_to.id == post.id
 ```
 
 

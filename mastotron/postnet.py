@@ -33,14 +33,14 @@ class PostNet:
 
         def add_post(post):
             if post.is_boost:
-                if post.in_boost_of and post.in_boost_of.is_valid:
-                    add_post(post.in_boost_of)
+                if post.is_boost_of and post.is_boost_of.is_valid:
+                    add_post(post.is_boost_of)
             elif post.is_valid:
                 ensure_node(post)
                 if post.is_reply:
-                    if post.in_reply_to and post.in_reply_to.is_valid:
-                        add_post(post.in_reply_to)
-                        ensure_edge(post, post.in_reply_to, rel='replied_to')
+                    if post.is_reply_to and post.is_reply_to.is_valid:
+                        add_post(post.is_reply_to)
+                        ensure_edge(post, post.is_reply_to, rel='replied_to')
         
         for post in self.posts: add_post(post)
         

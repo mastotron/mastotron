@@ -1,4 +1,15 @@
-REL__IS_LOCAL_COPY_OF='is_local_copy_of'
+REL_IS_LOCAL_FOR='is_local_for'
+REL_IS_BOOST_OF='is_boost_of'
+REL_IS_BOOST_OF='is_boost_of'
+REL_IS_REPLY_TO='is_reply_to'
+REL_READ_STATUS='rel_is_read'
+NODE_READ_STATUS_IS_READ='read'
+NODE_READ_STATUS_IS_UNREAD='unread'
+REL_GRAPHTIME='when'
+
+
+GRAPHTIME_ROUNDBY=10
+
 LIMNODES=30
 SCORE_TYPE = 'All'
 LIM_TIMELINE=25
@@ -15,6 +26,7 @@ import numpy as np
 from mastodon.errors import MastodonNotFoundError, MastodonNetworkError
 from mastodon import Mastodon, AttribAccessDict
 from datetime import datetime, timedelta, timezone
+import datetime as dt
 from scipy.stats import gmean
 from math import sqrt
 import json

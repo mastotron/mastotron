@@ -28,10 +28,10 @@ def post_to_html(self, allow_embedded = True, url=None, **y):
     # embed
     embed_str = ''
     if allow_embedded:
-        if self.is_boost and self.in_boost_of:
-            embed_str = post_to_html(self.in_boost_of)
-        elif self.is_reply and self.in_reply_to:
-            embed_str = post_to_html(self.in_reply_to)
+        if self.is_boost and self.is_boost_of:
+            embed_str = post_to_html(self.is_boost_of)
+        elif self.is_reply and self.is_reply_to:
+            embed_str = post_to_html(self.is_reply_to)
     
     # header
     hdrstr=f'<div class="post_author">{austr}</div>'
