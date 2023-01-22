@@ -1,5 +1,7 @@
 REL__IS_LOCAL_COPY_OF='is_local_copy_of'
-LIMNODES=50
+LIMNODES=30
+SCORE_TYPE = 'All'
+LIM_TIMELINE=25
 
 
 import os,sys; sys.path.insert(0,'..')

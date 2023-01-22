@@ -6,7 +6,10 @@ from .db import TronDB
 in_reply_to_uri_key = 'in_reply_to__id'
 
 def Post(url_or_uri_x, **post_d):
-    from .mastotron import Tron    
+    if not url_or_uri_x: return
+    if type(url_or_uri_x) is PostModel: return url_or_uri_x
+    
+    from .mastotron import Tron
     return Tron().post(url_or_uri_x, **post_d)
 
 
@@ -14,10 +17,11 @@ def Post(url_or_uri_x, **post_d):
 class PostModel(DictModel):
     def __init__(self,*x,**y):
         super().__init__(*x,**y)
-        # self.save()
+        self.boot()
 
     def __eq__(self, post):
-        return self._id == post._id
+        post=Post(post)
+        return type(post) is PostModel and self._id==post._id
 
     def __hash__(self):
         return hash(self._id)
@@ -25,10 +29,22 @@ class PostModel(DictModel):
     def __gt__(self, other):
         return self.timestamp > other.timestamp
 
+    def boot(self):
+        if self._id and self.urli and self._id != self.urli:
+            self.set_is_copy_of(self.urli)
+        return self
 
     @property
-    def uri(self):
-        return self._data.get('url')
+    def urli(self):
+        return self.url if self.url else self.uri
+
+    def set_is_copy_of(self, post_or_uri):
+        post=Post(post_or_uri)
+        if post:
+            self.relate(
+                post,
+                REL__IS_LOCAL_COPY_OF
+            )
 
     @property
     def is_valid(self):
@@ -133,8 +149,8 @@ class PostModel(DictModel):
     def context(self):
         return self.get_context(
             as_list=False,
-            recurse=1,
-            interrelate=True,
+            recurse=0,
+            interrelate=False,
             progress=True
         )
     
@@ -155,25 +171,38 @@ class PostModel(DictModel):
         return self.op.get_context() if self.op != self else []
 
 
-    def iter_context(self, recurse=0, progress=False, **kwargs):
+    def iter_context(self, recurse=0, progress=False, lim=None,**kwargs):
         done=set()
-        posts=set(self.get_posts_above() + [self] + self.get_posts_below())
-        iterr=posts
-        if progress: iterr=tqdm(iterr, desc='Iterating context')
+
+        def postiter():
+            yield from reversed(self.get_posts_above())
+            yield self
+            yield from self.get_posts_below()
+        iterr=postiter()
+        if progress: iterr=tqdm(iterr, desc='Iterating context')        
         for post in iterr:
-            if post not in done:
+            if post!=self and post not in done:
                 done.add(post)
                 yield post
-            
-            if recurse and post!=self:
-                for post2 in post.iter_context(recurse=recurse-1, progress=False, **kwargs):
-                    if post2 not in done:
-                        done.add(post2)
-                        yield post2
+                if lim and len(done)>=lim: break
+        
+        # for post in {x for x in done}:
+        #     if not lim or len(done)<lim:
+        #         post2_iter = post.iter_context(
+        #             recurse=recurse-1 if recurse>0 else 0,
+        #             progress=False,
+        #             lim=lim if not lim else lim-len(done),
+        #             **kwargs
+        #         )
+        #         for post2 in post2_iter:
+        #             if post2 not in done:
+        #                 done.add(post2)
+        #                 yield post2
+        #                 if lim and len(done)>=lim: break
         
 
-    def get_context(self, as_list=True, recurse=0, interrelate=False, progress=False):
-        posts=list(self.iter_context(recurse=recurse, progress=False))
+    def get_context(self, as_list=True, recurse=0, interrelate=False, progress=False, lim=None):
+        posts=list(self.iter_context(recurse=recurse, progress=progress,lim=lim))
         if interrelate: self.interrelate(posts=posts)
         return PostList(posts) if not as_list else posts
 
@@ -218,9 +247,7 @@ class PostModel(DictModel):
             
             self._related=True
     
-    def boot(self, recurse=0, **kwargs):
-        self.interrelate(recurse=recurse, **kwargs)
-        return self
+    
 
 
     @property
@@ -281,17 +308,18 @@ class PostModel(DictModel):
         return self.relations_out(rel) + self.relations_inc(rel)
 
     
-    @property
+    
+    @cached_property
     def source(self):
         l=self.relations_out(REL__IS_LOCAL_COPY_OF)
         return l[0] if l else None
     
-    @property
+    @cached_property
     def copies(self):
         l=self.relations_inc(REL__IS_LOCAL_COPY_OF)
         return l if l else []
 
-    @property
+    @cached_property
     def replies(self):
         return PostList(Post(idx) for idx in [*set(self._data.get('replies_uri',[]))])
 
@@ -413,20 +441,18 @@ class PostModel(DictModel):
         TronDB().set_post(self.data)
         # TronDB().gdb.updatej(data)
 
-    def mark_read(self, in_copies=True, in_source=True):
+    def mark_read(self):
         # save in self
-        print(f'I {self} am currently of read status {self._data.get("is_read")}')
         self._data['is_read']=True
         self.save()
+
+        # save in boost
+        if self.is_boost and self.in_boost_of:
+            self.in_boost_of.mark_read()
         
-        if in_source:
-            source=self.source
-            if source:
-                source.mark_read(in_copies=False, in_source=False)
-        
-        if in_copies:
-            for c in self.copies:
-                c.mark_read(in_copies=False, in_source=False)
+        # save in source if any
+        if self.source:
+            self.source.mark_read()
     
     def mark_unread(self):
         self._data['is_read']=False
@@ -434,8 +460,13 @@ class PostModel(DictModel):
     
     @property
     def is_read(self):
+        if self.is_boost and self.in_boost_of:
+            return self.in_boost_of.is_read
+        if self.source:
+            return self.source.is_read
         return self._data.get('is_read', False)
     
+
     
     @property
     def data_default(self):
@@ -454,14 +485,24 @@ class PostModel(DictModel):
         return od
 
     @cached_property
-    def node_data(self):
+    def node_data(post):
         odx={}
-        odx['html'] = to_html(self, allow_embedded=False)
-        odx['shape']='box'
-        odx['label']=self.label
-        odx['text'] = self.text
+        odx['_id'] = post._id
+        odx['id']=post.url if post.url else post.uri
+        odx['html'] = post.get_html(allow_embedded=False)
+        odx['shape'] = 'circularImage' # if not same_author else 'box'
+        odx['image'] = post.author.avatar
+        odx['label']=post.label if not post.is_boost else ''
+        odx['text'] = post.text if not post.is_boost else 'RT'
         odx['node_type']='post'
-        odx['color'] = '#1f465c' if not self.is_reply else '#061f2e'
+        odx['scores'] = post.scores
+        odx['score'] = post.scores.get(SCORE_TYPE, np.nan)
+        odx['timestamp'] = post.timestamp
+        # odx['fixed']=dict(x=False,y=False)
+        odx['num_replies'] = post.num_replies
+        odx['is_read']=post.is_read
+        odx['is_reply']=post.is_reply
+        odx['is_boost']=post.is_boost
         return odx
 
 

@@ -146,3 +146,14 @@ def untokenize(words):
         "can not", "cannot")
     step6 = step5.replace(" ` ", " '")
     return step6.strip()
+
+
+def find_local_url(*urls):
+    urls = [x for x in urls if type(x)==str and x]
+    urls.sort(key=lambda x: -x.count('@'))
+    return urls[0] if urls else ''
+
+def find_localremote_url(url1,url2):
+    urls = [url1,url2]
+    urls.sort(key=lambda x: -x.count('@'))
+    return tuple(urls)

@@ -25,30 +25,35 @@
   <body>
     <div id="header">
       mastotron v0.3
-      <div id="optbuttons"><a onclick="toggle_darkmode()"><img id="nightmode" src="/static/dark-mode-6682.png" width="20" height="20" /></a></div>
-    </div>
 
-    <div id="config">
-      <form id="configform">
-        <div id="configform_account_div">
-          <input id="configform_account" name="account" value="{{session.get('account','')}}" placeholder="mastodonuser@mastodonserver.com"></input>
-        </div>
+      <div id="config">
+        <!-- <form id="configform">
+          <div id="configform_account_div">
+            <input id="configform_account" name="account" value="{{session.get('account','')}}" placeholder="mastodonuser@mastodonserver.com"></input>
+          </div>
 
-        <div id="configform_code_div" hidden>
-          <input id="configform_code" name="code" value="" placeholder="Enter authentication code"></input>
-        </div>
-        
-        <!-- <input id="configform_submit" type="submit" value="Login"> -->
-      </form>
-      
+          <div id="configform_code_div" hidden>
+            <input id="configform_code" name="code" value="" placeholder="Enter authentication code"></input>
+          </div>
+          
+        </form> -->
+        <div id="acctname">{{session.get('account','')}}</div>
+      </div>
 
+      <div id="optbuttons">
+        <a onclick="toggle_darkmode()">
+          <img id="nightmode" src="/static/dark-mode-6682.png" width="20" height="20" />
+        </a>
+      </div>
       
     </div>
 
     <div id="logmsg"></div>
-    </div>
-
-    <center><div id="postnetviz"></div></center>
+  
+    <center>
+      <div id="postnetviz"></div>
+    </center>
+    
     <div id="tweet" hidden></div>
 
 

@@ -10,9 +10,9 @@ parser = argparse.ArgumentParser(
     prog = 'mastotron',
     description = 'GUI and programmatic interface to mastodon',
 )
-parser.add_argument('--web', action='store_true')
-parser.add_argument('--code', action='store_true')
-
+parser.add_argument('-g','--gui', action='store_true', help='Run as electron app (default)')
+parser.add_argument('-w','--web', action='store_true', help='Run as local web server')
+parser.add_argument('-c','--code', action='store_true', help='Run in ipython terminal')
 
 
 def main():

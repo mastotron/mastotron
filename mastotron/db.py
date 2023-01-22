@@ -79,7 +79,12 @@ class TronDB:
             )
         return gdb
     
-    def relate(self, obj1, obj2, rel):
+    def relate(self, obj1, obj2, rel, force=False):
+
+        if not force:
+            rels_sofar = set(self.get_relatives(obj1, rel))
+            if obj2._id in rels_sofar: return
+            
         self.gdb.put(obj1._id,rel,obj2._id)
 
     def get_relatives(self, obj, rel):

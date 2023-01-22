@@ -1,6 +1,8 @@
 body {
 font: 10pt arial;
 color: black;
+width:100vw;
+height:150vh;
 /* background-color: white;  */
 background-color: #eeeeee;
 /* background-color: black;  */
@@ -19,10 +21,11 @@ div { margin: 0; padding: 0; }
 }
 
 a { color: lightblue; }
+#acctname { font-size: 11pt; }
 #header {
     position:absolute;
     top:5px;
-    right:5px;
+    left:5px;
     vertical-align: middle;
     font-size: 12pt;
     z-index:1;
@@ -32,19 +35,35 @@ a { color: lightblue; }
 }
 #logmsg {
 font: 10pt arial;
+top:5px;
+right:5px;
+text-align:right;
+position:absolute;
+color:gray;
 }
 
 #postnetviz {
-height: 99vh; /* For 100% screen height */
-width:  99vw; /* For 100% screen width */
+height: 95vh; /* For 100% screen height */
+width:  95vw; /* For 100% screen width */
 /* border: 1px dotted slategrey; */
-
-/* width: 100%; */
-/* height: 800px; */
-/* border: 1px solid lightgray; */
+border:0px;
+margin:0;
+padding:0;
+outline:0;
+border:none;
 /* background-color: #eeeeee; */
-/* float:right; */
 }
+#postnetviz:focus {outline:0;border:none;}
+#postnetviz:active {outline:0;border:none;}
+#postnetviz:hover {outline:0;border:none;}
+.vis-network:focus {outline:0;border:none;}
+.vis-network:active {outline:0;border:none;}
+.vis-network:hover {outline:0;border:none;}
+canvas:focus {outline:0;border:none;}
+canvas:active {outline:0;border:none;}
+canvas:hover {outline:0;border:none;}
+
+
 #tweet { 
     position: absolute;
     top: 30px;
@@ -65,7 +84,8 @@ width:  99vw; /* For 100% screen width */
     text-overflow: ellipsis;
 }
 #optbuttons {
-    text-align:right;
+    margin-top:5px;
+    /* text-align:right; */
 }
 input {
 background-color: #eeeeee; 
@@ -114,12 +134,12 @@ font-size:13pt;
 
 
 #config {
-    position:absolute;
-    top:5px;
-    left:5px;
+    /* position:absolute; */
+    /* top:5px; */
+    /* right:5px; */
     z-index: 1;
     width:20em;
-    height:5em;
+    /* height:5em; */
     /* background-color: yellow; */
     text-align: left;
 }

@@ -7,9 +7,6 @@ class Poster(DictModel):
     def account(self):
         un, server = parse_account_name(self.url)
         return f'{un}@{server}'
-    
-    @property
-    def uri(self): return self.url
 
     @property
     def is_valid(self):

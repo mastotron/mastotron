@@ -9,7 +9,7 @@ var darktxtcolor = 'white';
 var lighttxtcolor = 'black';
 var darkimg = "/static/dark-mode-6682-inv.png";
 var lightimg = "/static/dark-mode-6682.png";
-var limnodesgraph = 50;
+var limnodesgraph = 30;
 if (DARKMODE==1) { 
   var txtcolor = darktxtcolor; 
 } else { 
@@ -26,6 +26,7 @@ var data = { nodes: nodes, edges: edges};
 var options = {
   interaction:{
     hover: true,
+    zoomView: false,
     zoomSpeed: .1,
     multiselect: true
   },
@@ -51,12 +52,12 @@ var options = {
   },
 
   nodes: {
-    borderWidth: 1,
+    borderWidth: 0,
     size: 20,
     color: {
-      border: "#222222",
+      // border: "#222222",
       // background: "#666666",
-      hover: "#777777"
+      // hover: "#777777"
     },
     font: { 
       color: txtcolor
@@ -68,7 +69,7 @@ var options = {
     improvedLayout:true,
     clusterThreshold: 150,
     hierarchical: {
-      enabled:true,
+      enabled:false,
       levelSeparation: 150,
       nodeSpacing: 25,
       treeSpacing: 50,
@@ -82,14 +83,14 @@ var options = {
   },
 
   physics:{
-    enabled: false,
+    enabled: true,
     barnesHut: {
       // theta: 0.5,
-      // gravitationalConstant: -3000,
-      // centralGravity: 1,
-      // springLength: 95,
-      springConstant: 0,
-      // damping: 0.09,
+      gravitationalConstant: -3000,
+      centralGravity: 1,
+      springLength: 95,
+      springConstant: 0.05,
+      damping: 0.09,
       avoidOverlap: 1
     },
     forceAtlas2Based: {
@@ -99,7 +100,7 @@ var options = {
       springConstant: 0.08,
       springLength: 100,
       damping: 0.4,
-      avoidOverlap: 0
+      avoidOverlap: 1
     },
     repulsion: {
       centralGravity: 0.2,
@@ -112,12 +113,12 @@ var options = {
       centralGravity: 2,
       springLength: 200,
       springConstant: 100,
-      nodeDistance: 100,
+      nodeDistance: 150,
       damping: 1,
       avoidOverlap: 1
     },
     maxVelocity: 10,
-    minVelocity: .1,
+    minVelocity: .5,
     solver: 'hierarchicalRepulsion',
     stabilization: {
       enabled: true,
@@ -126,7 +127,7 @@ var options = {
       onlyDynamicEdges: false,
       fit: true
     },
-    timestep: .1,
+    timestep: 1,
     adaptiveTimestep: true,
     // wind: { x: 0, y: -100 }
   },
@@ -193,13 +194,13 @@ function show_status_div(params) {
   $('#tweet').html(node_d['html']);  
   x = node_pos_web['x'];
   y = node_pos_web['y'];
-  // $('#tweet').offset(
-  //   { 
-  //     top: y + _offset, 
-  //     left: x + _offset
-  //     // top:_offset,
-  //     // right:0
-  //   });
+  $('#tweet').offset(
+    { 
+      top: y + _offset, 
+      left: x + _offset
+      // top:_offset,
+      // right:0
+    });
   $('#tweet').show();
 }
 
@@ -241,12 +242,15 @@ function del_node(node_id, recursive = true) {
   }
 
   del_nodes(node_ids_to_del);
+  request_pushes();
+  request_updates();
+
+  // logmsg('marked '+node_id+' as read');
 }
 
 function del_nodes(node_ids) {
   if (node_ids.length>0) {
     socket.emit('mark_as_read',node_ids);
-    freeze_nodes();
     nodes.remove(node_ids);
     // style_nodes();
   }
@@ -294,11 +298,11 @@ function lim_nodes() {
 }
 
 function update_nodes(data) {
-  fix_nodes();
+  // fix_nodes();
   nodes.update(data.nodes);
   edges.update(data.edges);
   // repos_nodes();
-  fix_nodes();
+  // fix_nodes();
   style_edges();
   lim_nodes();
   style_nodes();
@@ -310,24 +314,26 @@ function sleep(ms) {
 }
 
 function fix_nodes() {
+  // return;
+  // console.log('fix_nodes')
   iter_nodes().forEach(function(n){
     nd=nodes.get(n.id);
-    // nd['x']=n.x;
-    // nd['y']=n.y;
-    // nd['fixed']={x:false,y:false}
-    // console.log(nd.x, nd.y, n.x, n.y,nd.fixed);
-    // nodes.update(nd);
-    // nd['fixed']={x:false,y:false}
-    // nodes.update(nd);
+    nd['x']=n.x;
+    nd['y']=n.y;
+    nd['fixed']={x:false,y:true}
+  //   // console.log(nd.x, nd.y, n.x, n.y,nd.fixed);
+  //   // nodes.update(nd);
+  //   // nd['fixed']={x:false,y:true}
+    nodes.update(nd);
   });
 }
 
 function freeze_nodes() {
   iter_nodes().forEach(function(n){
     nd=nodes.get(n.id);
-    nd['x']=n.x;
-    nd['y']=n.y;
-    nd['fixed']={x:true,y:true}
+    // nd['x']=n.x;
+    // nd['y']=n.y;
+    // nd['fixed']={x:true,y:true}
     // console.log(nd.x, nd.y, n.x, n.y,nd.fixed);
     // nodes.update(nd);
     // nd['fixed']={x:false,y:false}
@@ -394,6 +400,7 @@ function get_node_scores(score_type=SCORE_TYPE, log = false) {
     node_d = nodes.get(node.id);
     if (node_d != null) {
       score = node_d.scores[score_type]+1;
+      // score = node_d.timestamp;
       if (log) { score = Math.log10(score); }
       scores[node.id] = score;
     }
@@ -401,11 +408,43 @@ function get_node_scores(score_type=SCORE_TYPE, log = false) {
   return scores;
 }
 
+function get_all_timestamps() {
+  l=[];
+  for (node_d of iter_nodes_d()) { l.push(node_d.timestamp); }
+  return l;
+}
+
+function get_all(feat) {
+  l=[];
+  for (node_d of iter_nodes_d()) { l.push(node_d[feat]); }
+  return l;
+}
+
+
+function rankBetween(unscaledNum, allUnscaledNums, minScale, maxScale) {
+  rank = getIndexToIns(allUnscaledNums, unscaledNum);
+  return scaleBetween(
+    rank,
+    minScale,
+    maxScale,
+    0,
+    allUnscaledNums.length,
+  )
+}
+
 function scaleBetween(unscaledNum, minAllowed, maxAllowed, min, max) {
   return (maxAllowed - minAllowed) * (unscaledNum - min) / (max - min) + minAllowed;
 }
 
-function size_nodes(max_size=40, min_size=20, score_type=SCORE_TYPE) {  
+function size_nodes(max_size=40, min_size=20, score_type=SCORE_TYPE, size_by='score') {
+  vals = get_all(size_by);
+  nodes.forEach(function(nd) {
+    nd.size = rankBetween(nd[size_by], vals, min_size, max_size);
+    nodes.update(nd);
+  })
+}
+
+function size_nodes_score(max_size=40, min_size=20, score_type=SCORE_TYPE) {  
   scores = get_node_scores();
   max_score = Math.max(...Object.values(scores));
   min_score = Math.min(...Object.values(scores));
@@ -482,40 +521,32 @@ network.on("hoverNode", function (params) {
   network.selectNodes([node_d.id]); 
   show_status_div(params);
 });
-network.on("blurNode", function (params) {
+// network.on("blurNode", function (params) {
   // hide_status_div();
   // network.unselectAll();
-});
-network.on("dragEnd", function (params) {
-  // iter_nodes_d().forEach(function(nd){nd.fixed={x:true,y:true}; nodes.update(nd)});
-  // iter_nodes_d().forEach(function(nd){nd.fixed={x:true,y:true}});
-  for (var i = 0; i < params.nodes.length; i++) {
-      var nodeId = params.nodes[i];
-      // nodes.update({id: nodeId, fixed: {x: false, y: false}});
-  }
-});
-network.on('dragStart', function(params) {
-  for (var i = 0; i < params.nodes.length; i++) {
-      var nodeId = params.nodes[i];
-      // nodes.update({id: nodeId, fixed: {x: false, y: false}});
-  }
-  // iter_nodes_d().forEach(function(nd){nd.fixed={x:false,y:false}; nodes.update(nd)});
-});
+// });
+// network.on("dragEnd", function (params) {
+//   nodes.forEach(function(nd){nd.fixed={x:false,y:true}; nodes.update(nd)});
+// });
+// network.on('dragStart', function(params) {
+//   nodes.forEach(function(nd){nd.fixed={x:false,y:false}; nodes.update(nd)});
+// });
 
-network.on("stabilizationIterationsDone", function(obj) {
-  logmsg('done stabilizing network');
-  console.log(obj);
-  // nodes.forEach(function(n) { n.fixed={x: true, y: true}; nodes.update(n); });
-});
+// network.on("stabilized", function(obj) {
+//   logmsg('done stabilizing network');
+//   console.log('stabilized',obj);
+//   freeze_nodes();
+// });
 
 
 
 network.on("click", function (_params) {
   node_d = get_node(_params);
-  // console.log('clicked:', node_d.id);
+  console.log('clicked', node_d, _params);
   if (node_d == undefined) {
     hide_status_div();
   } else {
+    console.log('clicked:', node_d.id, node_d.is_read);
     node_id = node_d.id;
     e = _params.event.srcEvent;
     // if (e.ctrlKey | e.metaKey) {
@@ -529,12 +560,9 @@ network.on("click", function (_params) {
 });
 
 network.on("doubleClick", function (params) {
-  $('#tweet').hide();
   console.log('double clicked');
   node_d = get_node(params);
   if (node_d != undefined) {
-    // del_node(node_d.id);
-    // add_context(node_d);
     window.open(node_d.id, '_blank');
   } else {
     request_updates();
@@ -559,29 +587,21 @@ network.on("oncontext", function (params) {
 // socket events
 
 function request_updates() {
-  logmsg('refreshing');
-  socket.emit('get_updates')
+  logmsg('refreshing timeline @ '+get_time_str());
+  socket.emit('get_updates', {'ids_now':get_all('id')})
+}
+
+function request_pushes() {
+  logmsg('checking pushes @ '+get_time_str());
+  socket.emit('get_pushes', {'ids_now':get_all('id')})
 }
 
 socket.on('get_updates', function(data) {
-  logmsg('refreshed');
-  // console.log('got updates:', data); 
+  if(data.logmsg){logmsg(data.logmsg);}
   update_nodes(data); 
 });
 
-// start
-$(document).ready(function(){  
-  startnet();
-  
-  
-  setInterval(function() { socket.emit('get_pushes'); }, 1 * 1000);
-  // setInterval(function() { fix_nodes(); }, 100);
-  setInterval(function() { request_updates(); }, 30 * 1000);
-
-  if (DARKMODE == 1) { set_dark_mode(); } else { set_light_mode(); }
-
-  
-});
+socket.on('logmsg', function(msg) {if(msg){logmsg(msg)};});
 
 
 // Other events
@@ -622,17 +642,11 @@ function toggle_mode_info() {
 
 
 $(document).on('keydown', function (event) {
-  console.log(event);
-  if (event.which==27) {
+  // console.log(event);
+  if (event.which==27) {   // escape
     set_mode_default();
     network.unselectAll();
     hide_status_div();
-  } else if ((event.which==88) | (event.which==82)) { // backspace or x
-      // del_nodes(network.getSelectedNodes());
-      network.getSelectedNodes().forEach(function(n){
-        console.log(n);
-        del_node(n);
-      })
   } else if (event.ctrlKey | event.metaKey) {
     // console.log(event);
     if (event.which == 65) { // a (select all)
@@ -641,20 +655,27 @@ $(document).on('keydown', function (event) {
       iter_nodes_d().forEach(function(nd){node_ids.push(nd.id)});
       network.selectNodes(node_ids);
     } else {
-      // set_mode_markread();
-      toggle_mode_read();
+      set_mode_markread();
+      // toggle_mode_read();
     }
   } else if (event.altKey) {
-    toggle_mode_info();
+    // toggle_mode_info();
+    set_mode_getcontext();
+  } else if ((event.which==88) | (event.which==82)) { // x or r
+    // del_nodes(network.getSelectedNodes());
+    network.getSelectedNodes().forEach(function(n){
+      console.log(n);
+      del_node(n);
+    })
   }
-  // } else {
+  // else {
     // set_mode_default()
   // }   
 });
 
-// $(document).on('keyup', function (event) {
-  // set_mode_default();
-// });
+$(document).on('keyup', function (event) {
+  set_mode_default();
+});
 
 
 
@@ -683,11 +704,20 @@ function getIndexToIns(arr, num) {
     return index === -1 ? arr.length : index
 }
 
+function repos_nodes() {
+  times = get_all('timestamp');
+  scores = get_all('score')
+  nodes.forEach(function(nd) {
+    nd.y = rankBetween(nd.timestamp, times, 400, -400);
+    // nd.x = rankBetween(nd.score, scores, 400, -400);
+  })
+}
 
-function repos_nodes(
+
+function repos_nodes_orig(
     factor1=2,
     factor2=200,
-    overwrite=false
+    overwrite=true
   ) {
   scores = []; timestamps = []; nodes_d = [];
   
@@ -724,14 +754,15 @@ function repos_nodes(
   for (nd of nodes_d) {
     // console.log('node',nd.id,'has x,y now of',nd.x,nd.y,'with score of',nd.score,nd.timestamp);
     // console.log('overwrite',overwrite,!nd.x,!nd.y,nd.x,nd.y);
-    if (overwrite | (nd.x==undefined) | (nd.y==undefined)) {
+    // if (overwrite | (nd.x==undefined) | (nd.y==undefined)) {
+    if (overwrite | (nd.y==undefined)) {
       score = getIndexToIns(scores, nd.score);
       timestamp = getIndexToIns(timestamps, 1*nd.timestamp);
       new_score_xy = scaleBetween(score,min_x,max_x,minscore,maxscore);
       new_time_xy = scaleBetween(timestamp,max_y,min_y,mintime,maxtime);
 
       if(new_score_xy & new_time_xy) {
-        nd['x'] = new_score_xy;
+        // nd['x'] = new_score_xy;
         nd['y'] = new_time_xy;
         nd['fixed'] = {x: false, y: true};
         // console.log([nd.score, nd.timestamp], [nd.x, nd.y]);
@@ -741,4 +772,25 @@ function repos_nodes(
     }
   }
   nodes.update(ndl);
+
+  // fix_nodes();
 }
+
+
+
+
+
+
+// start
+$(document).ready(function(){  
+  startnet();
+  
+  
+  setInterval(function() { request_pushes(); }, 5 * 1000);
+  setInterval(function() { fix_nodes(); }, 1000);
+  setInterval(function() { request_updates(); }, 30 * 1000);
+
+  if (DARKMODE == 1) { set_dark_mode(); } else { set_light_mode(); }
+
+  
+});

@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', function () {
         getRequest(url + route)
             // .then(data => console.log(data))
     }
-    setInterval(keep_alive_server, interval_request);
+    // setInterval(keep_alive_server, interval_request);
 })
 
 
@@ -40,7 +40,8 @@ socket.on('logmsg', function(e){
 
 function logmsg(x) {
     console.log('logmsg',x);
-    $.flash(x);
+    // $.flash(x);
+    $('#logmsg').html(x);
 }
 
 // $(document).ready(function(){
@@ -48,3 +49,25 @@ function logmsg(x) {
 //         $('#flash').fadeOut('slow');
 //     }, 2000); // <-- time in milliseconds
 // })
+
+
+function get_datetime_str() {
+    var m = new Date();
+    var dateString =
+        m.getUTCFullYear() + "-" +
+        ("0" + (m.getUTCMonth()+1)).slice(-2) + "-" +
+        ("0" + m.getUTCDate()).slice(-2) + " " +
+        ("0" + m.getUTCHours()).slice(-2) + ":" +
+        ("0" + m.getUTCMinutes()).slice(-2) + ":" +
+        ("0" + m.getUTCSeconds()).slice(-2);
+    return dateString;
+}
+
+function get_time_str() {
+    var m = new Date();
+    var dateString =
+        ("0" + m.getUTCHours()).slice(-2) + ":" +
+        ("0" + m.getUTCMinutes()).slice(-2) + ":" +
+        ("0" + m.getUTCSeconds()).slice(-2);
+    return dateString;
+}

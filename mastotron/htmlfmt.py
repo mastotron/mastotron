@@ -37,7 +37,7 @@ def post_to_html(self, allow_embedded = True, url=None, **y):
     hdrstr=f'<div class="post_author">{austr}</div>'
     uristr=f''
     # stats
-    if not url: url=self._id
+    url = self.url if self.url else self.uri
     stats_str = f'''
         <div class="post_stats">
             {self.replies_count:,} 🗣
@@ -46,7 +46,11 @@ def post_to_html(self, allow_embedded = True, url=None, **y):
             |
             {self.favourites_count:,} 💙
             |
-            <span class="post_uristr"><a href="{url}" target="_blank">Posted {self.datetime_str_h}</a></span>
+            <span class="post_uristr"><a href="{self.urli}" target="_blank">URI</a></span>
+            |
+            Read: {self.is_read}
+            |
+            <span class="post_uristr"><a href="{self._id}" target="_blank">Posted {self.datetime_str_h}</a></span>
         </div>
     ''' if not self.is_boost else f'''
         <div class="post_stats">
