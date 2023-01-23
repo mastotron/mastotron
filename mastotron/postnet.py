@@ -28,7 +28,6 @@ class PostNet:
                 eopts['from']=n1id
                 eopts['to']=n2id
                 g.add_edge(n1id, n2id, **eopts)
-                print('add edge!',n1id,n1id)
             return (n1id,n2id)
 
         def add_post(post):
@@ -36,7 +35,6 @@ class PostNet:
                 return add_post(post.is_boost_of)
             
             pid=ensure_node(post)
-            print('pid',pid)
             if post.is_reply_to:
                 ensure_edge(post, post.is_reply_to)
 

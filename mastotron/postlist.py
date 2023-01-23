@@ -6,17 +6,34 @@ class PostList(UserList):
         def iterr():
             seen=set()
             for post in data_iter:
-                post = Post(post).source
-                if post and post not in seen:
-                    yield post
-                    seen.add(post)
+                post = Post(post)
+                if post:
+                    post = post.source
+                    if post not in seen:
+                        yield post
+                        seen.add(post)
+
         l=list(islice(iterr(), lim))
         super().__init__(l)
+        self.sort_chron()
 
     def __hash__(self):
         return hash('____'.join(p._id for p in self))
     def __add__(self, other):
-        return PostList(self.data + other.data)
+        def iterr():
+            yield from self
+            yield from other
+        return PostList(iterr())
+    
+    def __sub__(self, other):
+        bad_ids = set(other)
+        def iterr():
+            for x in self:
+                if x not in bad_ids:
+                    yield x
+        return PostList(iterr())
+
+
     
     def sort_chron(self):
         self.sort(key=lambda post: post.timestamp if post.timestamp else 0, reverse=False)
@@ -35,8 +52,15 @@ class PostList(UserList):
     def g(self): return self.graph()
     
                 
-
-
     @property
     def posters(self):
         return {post.author for post in self}
+
+    def interrelate(self):
+        context_d = dict((post._data.get('id'), post) for post in self)
+        for post in self:
+            if post.is_reply and not post.out(REL_IS_REPLY_TO):
+                post2 = context_d.get(post.in_reply_to_id)
+                if post2:
+                    post.relate(post2, rel=REL_IS_REPLY_TO)
+                    print(post,'-->',post2)

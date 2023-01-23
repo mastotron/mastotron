@@ -71,7 +71,7 @@ def get_srvr_name(data={}): return get_acct_name().split('@')[-1].strip()
 class NodeListener(StreamListener):
     def on_update(self, status):
         url = status.get('url')
-        post = Post(url)
+        post = Post(url, **status)
         if post:
             new_urls.add(post)
 
@@ -115,23 +115,21 @@ def get_updates(data={}):
         
 
 
-def update_posts(tl, omsg='refreshed', emit_key='get_updates',ids_done=None):
+def update_posts(tl, omsg='refreshed', emit_key='get_updates',ids_done=None,unread_only=True):
     if len(tl):
         tnet = tl.network()
         nx_g = tnet.graph()
-        # nx_g.remove_nodes_from(
-        #     n 
-        #     for n,d in list(nx_g.nodes(data=True))
-        #     if d.get('is_read')
-        #     or (ids_done and d.get('id') in ids_done)
-        # )
-        print('nx_g',nx_g.order(),nx_g.size())
+        nx_g.remove_nodes_from(
+            n 
+            for n,d in list(nx_g.nodes(data=True))
+            if (unread_only and d.get('is_read'))
+            or (ids_done and d.get('id') in ids_done)
+        )
         nodes = [d for n,d in nx_g.nodes(data=True)]
         edges = [d for a,b,d in nx_g.edges(data=True)]
-        pprint([(d['from'],d['to']) for d in edges])
-        
+        print('nodes',len(nodes),'edges',len(edges))
+
         omsg = f'{len(nodes)} new updates @ {get_time_str()}'
-        # if bool(nodes) or bool(edges):
         if nodes or edges:
             odata = dict(nodes=nodes, edges=edges, logmsg=omsg)
             emit(emit_key, odata)
@@ -145,10 +143,7 @@ def update_posts(tl, omsg='refreshed', emit_key='get_updates',ids_done=None):
 def add_context(node_id):
     print('add_context',node_id)
     post = Post(node_id)
-    print('!',post)
-    print('!!!',post.convo)
-    res = update_posts(post.convo[:LIM_TIMELINE])
-    print('????',res)
+    update_posts(post.convo, unread_only=False)
 
 
 

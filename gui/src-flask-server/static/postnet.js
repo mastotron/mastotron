@@ -284,6 +284,7 @@ function lim_nodes_by_time() {
 }
 
 function lim_nodes() {
+  return;
   // console.log('num nodes',nodes.length);
   if (nodes.length > limnodesgraph) {
     todel=[];

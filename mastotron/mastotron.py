@@ -1,4 +1,6 @@
 from .imports import *
+NUM_GOT_CONTEXTS=0
+NUM_GOT_STATUS=0
 
 def Tron():
     return Mastotron()
@@ -63,7 +65,7 @@ class Mastotron():
         un,server = parse_account_name(account_name)
         path_user_secret = self._get_path_user_auth(account_name)
         if not os.path.exists(path_user_secret):
-            odir = os.path.dirname(self.path_user_secret)
+            odir = os.path.dirname(path_user_secret)
             if not os.path.exists(odir): os.makedirs(odir)
             
             api = self.api(server)
@@ -88,6 +90,8 @@ class Mastotron():
         return self._caches.get(dbname)
     
     def status(self, url_or_uri, **post_d):
+        global NUM_GOT_STATUS
+
         res = {}
         url = url_or_uri
         if url:
@@ -98,10 +102,14 @@ class Mastotron():
             elif url in cache:
                 res = cache[url]
             else:
+                NUM_GOT_STATUS+=1
+                # if NUM_GOT_STATUS>1: STOPXX
+
                 try:
                     server_name = get_server_name(url)
                     status_id = get_status_id(url)
                     api = self.api_server(server_name)
+
                     print(f'getting {server_name}\'s {status_id} from API')
                     res = api.status(status_id)
                     log.debug(f'got {url} from API')
@@ -121,18 +129,49 @@ class Mastotron():
             
 
     def status_context(self, uri, **status_d):
+        global NUM_GOT_CONTEXTS
         # with self.cache('context') as cache:
         cache = self.cache('context')
         if status_d:
+            # cache[uri] = {**cache.get(uri,{}), **status_d}
             cache[uri] = status_d
         else:
             if not uri in cache:
                 server,uname,status_id = get_server_account_status_id(uri)
+                # print(server,uname,status_id)
+                NUM_GOT_CONTEXTS+=1
+                # if NUM_GOT_CONTEXTS>1: STOPXXX
                 try:
                     print(f'getting {server}\'s CONTEXT {status_id} from API')
-                    cache[uri] = self.api_server(server).status_context(status_id)
+                    statd=self.api_server(server).status_context(status_id)
+                    cache[uri] = statd
+
+                    post = Post(uri)
+                    l_pre=[Post(**d) for d in statd.get('ancestors',[])]
+                    l_post=[Post(**d) for d in statd.get('descendants',[])]
+                    # print('post:',post)
+                    # pprint(l_pre)
+                    # pprint(l_post)
+                    
+                    if l_pre:
+                        l_preself=l_pre+[post]
+                        for i in range(len(l_preself)-1):
+                            a=l_preself[i]
+                            b=l_preself[i+1]
+                            if b.is_reply and not b.out(REL_IS_REPLY_TO):
+                                # print(f'{a} --> {b} ???')
+                                b.relate(a,REL_IS_REPLY_TO)
+                    
+                    if l_post:
+                        a=post
+                        for b in l_post:
+                            if b.is_reply and not b.out(REL_IS_REPLY_TO):
+                                # print(f'{a} --> {b} ???')
+                                b.relate(a,REL_IS_REPLY_TO)
+                    
                 except Exception as e:
                     log.error(e)
+                    print(f'!! {e} !!')
                     return {}
         return cache[uri]
 
@@ -166,9 +205,9 @@ class Mastotron():
             yield post
             seen.add(post)
         
-        if follow_chains:
-            for post in seen:
-                yield from post.iter_context(lim=lim)
+        # if follow_chains:
+        #     for post in seen:
+        #         yield from post.iter_context(lim=lim)
 
 
     def database_iter(self,timestamp=None,**kwargs):

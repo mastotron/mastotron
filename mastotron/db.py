@@ -102,7 +102,7 @@ class TronDB:
         rels=self.get_rels_out(obj,rel)
         return rels[0] if rels else None
     def get_rel_inc(self, obj, rel):
-        rels=self.get_rels_in(obj, rel)
+        rels=self.get_rels_inc(obj, rel)
         return rels[0] if rels else None
     def get_rel(self, obj, rel):
         rels = self.get_rels(obj,rel)
