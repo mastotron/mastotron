@@ -34,13 +34,10 @@ class PostNet:
             if post.is_boost_of:
                 return add_post(post.is_boost_of)
             
-            pid=ensure_node(post)
-            if post.is_reply_to:
-                ensure_edge(post, post.is_reply_to)
-
-            if post.replies:
-                for post2 in post.replies:
-                    ensure_edge(post2, post, rel='replied_to')
+            ensure_node(post)
+            if post.is_reply_to: 
+                ensure_edge(post, post.is_reply_to, rel='replied_to')
+            
         
         for post in self.posts: add_post(post)
         

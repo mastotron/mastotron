@@ -189,7 +189,7 @@ class Mastotron():
             **kwargs):
             
         def iter_posts():
-            if acct: yield from self.iter_timeline(acct, unread_only=unread_only, lim=lim, **kwargs)
+            if acct: yield from self.iter_timeline(acct, unread_only=unread_only, **kwargs)
             yield from self.database_iter(**kwargs)
 
         def iter_posts_filtered():
@@ -200,14 +200,7 @@ class Mastotron():
                     if unread_only and post.is_read: continue
                     yield post
         
-        seen=set()
-        for post in iter_posts_filtered():
-            yield post
-            seen.add(post)
-        
-        # if follow_chains:
-        #     for post in seen:
-        #         yield from post.iter_context(lim=lim)
+        yield from iter_posts_filtered()
 
 
     def database_iter(self,timestamp=None,**kwargs):

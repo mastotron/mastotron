@@ -14,7 +14,8 @@ GRAPHTIME_ROUNDBY=10
 
 LIMNODES=30
 SCORE_TYPE = 'All'
-LIM_TIMELINE=10
+LIM_TIMELINE=20
+LIM_CONVO=5
 
 
 import os,sys; sys.path.insert(0,'..')

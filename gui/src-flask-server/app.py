@@ -77,7 +77,6 @@ class NodeListener(StreamListener):
 
 @socketio.event
 def start_updates(data={}):
-    return
     global seen_posts, STARTED
     seen_posts = set()
     if not STARTED:
@@ -127,7 +126,7 @@ def update_posts(tl, omsg='refreshed', emit_key='get_updates',ids_done=None,unre
         )
         nodes = [d for n,d in nx_g.nodes(data=True)]
         edges = [d for a,b,d in nx_g.edges(data=True)]
-        print('nodes',len(nodes),'edges',len(edges))
+        # print('nodes',len(nodes),'edges',len(edges))
 
         omsg = f'{len(nodes)} new updates @ {get_time_str()}'
         if nodes or edges:
@@ -143,7 +142,8 @@ def update_posts(tl, omsg='refreshed', emit_key='get_updates',ids_done=None,unre
 def add_context(node_id):
     print('add_context',node_id)
     post = Post(node_id)
-    update_posts(post.convo, unread_only=False)
+    unread_convo = PostList(p for p in post.convo if not p.is_read)
+    update_posts(unread_convo[:LIM_TIMELINE])
 
 
 

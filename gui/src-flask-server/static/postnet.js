@@ -117,8 +117,8 @@ var options = {
       damping: 1,
       avoidOverlap: 1
     },
-    maxVelocity: 10,
-    minVelocity: .5,
+    maxVelocity: 5,
+    minVelocity: 1,
     solver: 'hierarchicalRepulsion',
     stabilization: {
       enabled: true,
@@ -127,7 +127,7 @@ var options = {
       onlyDynamicEdges: false,
       fit: true
     },
-    timestep: 1,
+    timestep: .15,
     adaptiveTimestep: true,
     // wind: { x: 0, y: -100 }
   },
@@ -299,15 +299,12 @@ function lim_nodes() {
 }
 
 function update_nodes(data) {
-  // fix_nodes();
+  unfreeze_nodes();
   nodes.update(data.nodes);
   edges.update(data.edges);
-  // repos_nodes();
-  // fix_nodes();
   style_edges();
   lim_nodes();
   style_nodes();
-  // network.startSimulation();
 }
 
 function sleep(ms) {
@@ -321,7 +318,7 @@ function fix_nodes() {
     nd=nodes.get(n.id);
     nd['x']=n.x;
     nd['y']=n.y;
-    nd['fixed']={x:false,y:true}
+    // nd['fixed']={x:false,y:true}
   //   // console.log(nd.x, nd.y, n.x, n.y,nd.fixed);
   //   // nodes.update(nd);
   //   // nd['fixed']={x:false,y:true}
@@ -332,16 +329,18 @@ function fix_nodes() {
 function freeze_nodes() {
   iter_nodes().forEach(function(n){
     nd=nodes.get(n.id);
-    // nd['x']=n.x;
-    // nd['y']=n.y;
-    // nd['fixed']={x:true,y:true}
-    // console.log(nd.x, nd.y, n.x, n.y,nd.fixed);
-    // nodes.update(nd);
-    // nd['fixed']={x:false,y:false}
-    // nodes.update(nd);
+    nd['x']=n.x;
+    nd['y']=n.y;
+    nd['fixed']={x:true,y:true}
+    nodes.update(nd);
   });
 }
-
+function unfreeze_nodes() {
+  nodes.forEach(function(nd){
+    nd['fixed']={x:false,y:false}
+    nodes.update(nd);
+  })
+}
 
 
 function style_edges() {
@@ -534,9 +533,9 @@ network.on("hoverNode", function (params) {
 // });
 
 // network.on("stabilized", function(obj) {
-//   logmsg('done stabilizing network');
-//   console.log('stabilized',obj);
-//   freeze_nodes();
+  // logmsg('done stabilizing network');
+  // console.log('stabilized',obj);
+  // freeze_nodes();
 // });
 
 
@@ -765,7 +764,7 @@ function repos_nodes_orig(
       if(new_score_xy & new_time_xy) {
         // nd['x'] = new_score_xy;
         nd['y'] = new_time_xy;
-        nd['fixed'] = {x: false, y: true};
+        // nd['fixed'] = {x: false, y: true};
         // console.log([nd.score, nd.timestamp], [nd.x, nd.y]);
         // console.log('node',nd.id,'has NEW x,y of',nd.x,nd.y,'with sorted',score,timestamp);
         ndl.push(nd);
@@ -788,7 +787,7 @@ $(document).ready(function(){
   
   
   setInterval(function() { request_pushes(); }, 5 * 1000);
-  setInterval(function() { fix_nodes(); }, 1000);
+  setInterval(function() { fix_nodes(); }, 100);
   setInterval(function() { request_updates(); }, 30 * 1000);
 
   if (DARKMODE == 1) { set_dark_mode(); } else { set_light_mode(); }
