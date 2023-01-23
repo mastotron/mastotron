@@ -84,50 +84,35 @@ var options = {
 
   physics:{
     enabled: true,
-    barnesHut: {
-      // theta: 0.5,
-      gravitationalConstant: -3000,
-      centralGravity: 1,
-      springLength: 95,
-      springConstant: 0.05,
-      damping: 0.09,
-      avoidOverlap: 1
-    },
     forceAtlas2Based: {
       theta: 0.5,
       gravitationalConstant: -50,
       centralGravity: 0.01,
       springConstant: 0.08,
       springLength: 100,
-      damping: 0.4,
+      damping: 1,
       avoidOverlap: 1
-    },
-    repulsion: {
-      centralGravity: 0.2,
-      springLength: 200,
-      springConstant: 0.5,
-      nodeDistance: 150,
-      damping: 0.09
     },
     hierarchicalRepulsion: {
       centralGravity: 2,
-      springLength: 200,
-      springConstant: 100,
+      springLength: 150,
+      springConstant: 150,
       nodeDistance: 150,
       damping: 1,
       avoidOverlap: 1
     },
+    
     maxVelocity: 5,
-    minVelocity: 1,
-    solver: 'hierarchicalRepulsion',
+    minVelocity: .1,
+    solver: 'forceAtlas2Based',
     stabilization: {
-      enabled: true,
+      enabled: false,
       iterations: 1000,
       updateInterval: .1,
       onlyDynamicEdges: false,
       fit: true
     },
-    timestep: .15,
+    timestep: .2,
     adaptiveTimestep: true,
     // wind: { x: 0, y: -100 }
   },
@@ -299,7 +284,7 @@ function lim_nodes() {
 }
 
 function update_nodes(data) {
-  unfreeze_nodes();
+  // unfreeze_nodes();
   nodes.update(data.nodes);
   edges.update(data.edges);
   style_edges();
@@ -318,7 +303,7 @@ function fix_nodes() {
     nd=nodes.get(n.id);
     nd['x']=n.x;
     nd['y']=n.y;
-    // nd['fixed']={x:false,y:true}
+    nd['fixed']={x:false,y:true}
   //   // console.log(nd.x, nd.y, n.x, n.y,nd.fixed);
   //   // nodes.update(nd);
   //   // nd['fixed']={x:false,y:true}
@@ -762,9 +747,9 @@ function repos_nodes_orig(
       new_time_xy = scaleBetween(timestamp,max_y,min_y,mintime,maxtime);
 
       if(new_score_xy & new_time_xy) {
-        // nd['x'] = new_score_xy;
+        nd['x'] = new_score_xy;
         nd['y'] = new_time_xy;
-        // nd['fixed'] = {x: false, y: true};
+        nd['fixed'] = {x: false, y: true};
         // console.log([nd.score, nd.timestamp], [nd.x, nd.y]);
         // console.log('node',nd.id,'has NEW x,y of',nd.x,nd.y,'with sorted',score,timestamp);
         ndl.push(nd);
