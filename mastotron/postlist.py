@@ -38,7 +38,7 @@ class PostList(UserList):
     def sort_chron(self):
         self.sort(key=lambda post: post.timestamp if post.timestamp else 0, reverse=False)
 
-    def sort_score(self, score_type='All'):
+    def sort_score(self, score_type=SCORE_TYPE):
         self.sort(key=lambda post: post.score(score_type), reverse=True)
     
     def network(self):

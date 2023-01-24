@@ -421,10 +421,11 @@ function scaleBetween(unscaledNum, minAllowed, maxAllowed, min, max) {
   return (maxAllowed - minAllowed) * (unscaledNum - min) / (max - min) + minAllowed;
 }
 
-function size_nodes(max_size=40, min_size=20, score_type=SCORE_TYPE, size_by='score') {
+function size_nodes(max_size=50, min_size=25, score_type=SCORE_TYPE, size_by='score') {
   vals = get_all(size_by);
   nodes.forEach(function(nd) {
     nd.size = rankBetween(nd[size_by], vals, min_size, max_size);
+    // nd.size = min_size;
     nodes.update(nd);
   })
 }
@@ -582,6 +583,7 @@ function request_pushes() {
 }
 
 socket.on('get_updates', function(data) {
+  console.log('got updates:',data);
   if(data.logmsg){logmsg(data.logmsg);}
   update_nodes(data); 
 });

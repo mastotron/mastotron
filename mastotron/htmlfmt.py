@@ -1,5 +1,20 @@
 from .imports import *
 
+
+svg_str_htmlkey='[[HTML]]'
+# svg_str=f'''<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200"><rect x="0" y="0" width="100%" height="100%" fill="#7890A7" stroke-width="5" stroke="#ffffff" ></rect><foreignObject x="1" y="1" width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="font-size:40px">{svg_str_htmlkey}</div></foreignObject></svg>'''
+svg_str=f'''<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400"><foreignObject x="1" y="1" width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="font-size:4em">{svg_str_htmlkey}</div></foreignObject></svg>'''
+
+
+def get_svg_url(svg_str):
+    return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg_str)
+
+def html2svg(html):
+    return get_svg_url(svg_str.replace(svg_str_htmlkey, html))
+
+
+
+
 def to_html(x, **y):
     from .post import PostModel
     if isinstance(x, PostModel):
@@ -8,6 +23,8 @@ def to_html(x, **y):
         return ''
 
 #                 <p>Post ID: <a href="{self._id}" target="_blank">{self.id}</a></p>
+
+
 def post_to_html(self, allow_embedded = True, url=None, **y): 
     datestr=f'<a href="{self._id}" target="_blank">{self.datetime_str_h}</a>'
     austr=f'<img class="post_avatarimg" src="{self.author.avatar}" width="50px" height="50px" /><a href="{self._id}" target="_blank">{self.author.display_name}</a> ({self.author.followers_count:,} 👥)'
@@ -69,3 +86,22 @@ def post_to_html(self, allow_embedded = True, url=None, **y):
     '''
     ohtml = '\n'.join([ln.lstrip() for ln in ohtml.split('\n')]).strip()
     return ohtml
+
+
+
+def post_to_svg(self): 
+    svg_str_pre='<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400"><rect x="0" y="0" width="100%" height="100%" fill="#dddddd"/><foreignObject x="0" y="0" width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="font-size:100px">'
+    svg_str_post='</div></foreignObject></svg>'
+
+    datestr=f'<a href="{self._id}" target="_blank">{self.datetime_str_h}</a>'
+    austr=f'{self.author.display_name} ({self.author.followers_count:,} 👥)'
+
+    ohtml = f'''
+        <div class="postsvg">
+            {austr}
+            {datestr}
+            {self.content}
+        </div>
+    '''
+    osvg_str = svg_str_pre + ohtml + svg_str_post
+    return get_svg_url(osvg_str)

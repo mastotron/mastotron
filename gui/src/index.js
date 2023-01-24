@@ -36,7 +36,7 @@ const createWindow = () => {
     const _mainWindow = new BrowserWindow({
       width: 1000,
       height: 800,
-      frame: false,
+      frame: true,
       // titleBarStyle: 'hidden',
 
       webPreferences: {

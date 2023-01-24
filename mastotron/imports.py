@@ -10,10 +10,10 @@ NODE_READ_STATUS_IS_UNREAD='unread'
 REL_GRAPHTIME='when'
 
 
-GRAPHTIME_ROUNDBY=10
+BLUR_MINUTES=5   # 5 minutes grace period / blur
 
 LIMNODES=30
-SCORE_TYPE = 'All'
+SCORE_TYPE = 'ExtendedSimple'
 LIM_TIMELINE=10
 LIM_CONVO=5
 
@@ -27,6 +27,7 @@ from typing import Optional,Union,Dict,List
 from sqlmodel import Field, Session, SQLModel, create_engine, select, Relationship
 import numpy as np
 from mastodon.errors import MastodonNotFoundError, MastodonNetworkError
+from mastodon.utility import AttribAccessDict
 from mastodon import Mastodon, AttribAccessDict
 from datetime import datetime, timedelta, timezone
 import datetime as dt

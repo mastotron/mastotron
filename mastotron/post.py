@@ -2,11 +2,16 @@ from .imports import *
 from .postlist import PostList
 from .htmlfmt import to_html
 from .db import TronDB
+from .htmlfmt import html2svg, post_to_svg
 
 is_reply_to_uri_key = 'is_reply_to__id'
 
 def Post(url_or_uri='', **post_d):
     if type(url_or_uri) is PostModel: return url_or_uri
+    if type(url_or_uri) in {AttribAccessDict,dict}:
+        post_d={**url_or_uri, **post_d}
+        url_or_uri=''
+    
     if not url_or_uri:
         if not post_d: return
         url_or_uri = post_d.get('url') if post_d.get('url') else post_d.get('uri')
@@ -113,7 +118,7 @@ class PostModel(DictModel):
     
     @cached_property
     def allcopies(self):
-        l=[self.source] + list(self.source.copies) + [self.in_boost_of]
+        l=[self.source] + list(self.source.copies) + [self.source.is_boost_of] + list(self.source.was_boosted_by)
         return {x for x in l if x is not None and type(x) is PostModel}
     
     def get_local(self, server):
@@ -146,7 +151,8 @@ class PostModel(DictModel):
     @cached_property
     def was_boosted_by(self):        
         if not self.is_boost:
-            return map(Post,self.incs(REL_IS_BOOST_OF))
+            return PostList(self.incs(REL_IS_BOOST_OF))
+        return PostList()
     
 
 
@@ -251,6 +257,13 @@ class PostModel(DictModel):
             'timestamp',
             self.datetime.timestamp()
         )
+    @property
+    def timestamp_bitshift(self):
+        return (self.id >> 16) / 1000
+
+    @property
+    def datetime_bitshift(self):
+        return dt.datetime.fromtimestamp(self.timestamp_bitshift)
 
     @cached_property
     def datetime(self):
@@ -538,13 +551,16 @@ class PostModel(DictModel):
 
     @cached_property
     def node_data(post):
+
         odx={}
         odx['_id'] = post._id
         odx['id'] = post._id
         odx['html'] = post.get_html(allow_embedded=False)
         odx['shape'] = 'circularImage' # if not same_author else 'box'
+        # odx['shape'] = 'image'
         odx['image'] = post.author.avatar
-        odx['label']=post.label if not post.is_boost else ''
+        # odx['image'] = post_to_svg(post)
+        odx['label']=post.get_label(limsize=50) if not post.is_boost else ''
         odx['text'] = post.text if not post.is_boost else 'RT'
         odx['node_type']='post'
         odx['scores'] = post.scores

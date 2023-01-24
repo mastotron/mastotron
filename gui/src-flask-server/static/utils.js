@@ -39,7 +39,7 @@ socket.on('logmsg', function(e){
 });
 
 function logmsg(x) {
-    console.log('logmsg',x);
+    // console.log('logmsg',x);
     // $.flash(x);
     $('#logmsg').html(x);
 }

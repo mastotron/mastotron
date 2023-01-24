@@ -77,6 +77,7 @@ class NodeListener(StreamListener):
 
 @socketio.event
 def start_updates(data={}):
+    return
     global seen_posts, STARTED
     seen_posts = set()
     if not STARTED:
@@ -105,12 +106,10 @@ def get_pushes(data={}):
 def get_updates(data={}):
     acct = get_acct_name()
     if not acct: return
-    tl = Tron().latest(acct, lim=LIM_TIMELINE)
-    update_posts(
-        tl,
-        omsg='timeline updated',
-        ids_done=set(data.get('ids_now',[]))
-    )
+    tl = Tron().timeline_unread(acct, lim=LIM_TIMELINE)
+    # for post in tl:
+        # print(post, post.get_label(), post.is_read, post.is_boost)
+    update_posts(tl,omsg='timeline updated',ids_done=set(data.get('ids_now',[])))
         
 
 
