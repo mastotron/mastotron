@@ -1,5 +1,5 @@
 body {
-font: 10pt arial;
+font: 11pt arial;
 color: black;
 width:120vw;
 height:200vh;
@@ -17,8 +17,9 @@ body::-webkit-scrollbar {
     bottom:5px;
     right:5px;
     color:gray;
-    /* width:400px; */
+    /* width:50em; */
     position: fixed;
+    text-align: right;
 
 }
 
@@ -54,15 +55,20 @@ a { color: lightblue; }
     z-index:1;
 
     /* letter-spacing: .5em; */
-    /* color: gray; */
+    color: gray;
 }
 #logmsg {
-font: 10pt arial;
+font: 1em;
 top:5px;
 right:5px;
 text-align:right;
 position:fixed;
 color:gray;
+}
+#optbuttons {
+    position: fixed;
+    top: 2em;
+    right:5px;
 }
 
 #postnetviz {
@@ -106,10 +112,7 @@ canvas:hover {outline:0;border:none;}
     /* white-space: nowrap; */
     text-overflow: ellipsis;
 }
-#optbuttons {
-    margin-top:5px;
-    /* text-align:right; */
-}
+
 input {
 background-color: #eeeeee; 
 /* color: gray; */

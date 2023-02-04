@@ -12,6 +12,4 @@ cogdb
 sqlitedict
 eventlet
 human_readable
-flask_restful
-flask_cors
-pyinstaller
+simple-websocket

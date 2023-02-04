@@ -1,10 +1,16 @@
 # make sure to use eventlet and call eventlet.monkey_patch()
 import eventlet
 eventlet.monkey_patch()
-import os,sys; sys.path.insert(0,'/Users/ryan/github/mastotron')
+
+import os,sys
+path_app = os.path.realpath(__file__)
+path_code = os.path.abspath(os.path.join(path_app,'..','..'))
+path_codedir = os.path.abspath(os.path.join(path_code,'..'))
+sys.path.insert(0,path_codedir)
 
 from mastotron import *
-from threading import Lock
+
+from threading import Lock,Thread
 from flask import Flask, render_template, request, redirect, url_for, session, current_app
 from flask_session import Session
 from flask_socketio import SocketIO, send, emit
@@ -225,9 +231,17 @@ def send_update(nodes=[], edges=[]):
 
 
 
+def open_view(wait=2):
+    time.sleep(wait)
+    webbrowser.open(f'http://{HOST}:{PORT}')
 
+def view(wait=2):
+    Thread(target=open_view, kwargs=dict(wait=wait)).start()
 
+def mainview(wait=2):
+    view(wait=wait)
+    main()
 
-if __name__=='__main__': 
-    socketio.run(app,debug=True, allow_unsafe_werkzeug=True)
-    
+def main(): return socketio.run(app, debug=True, allow_unsafe_werkzeug=True,port=PORT,host=HOST)
+
+if __name__=='__main__': main()

@@ -1,3 +1,9 @@
+# make sure to use eventlet and call eventlet.monkey_patch()
+import eventlet
+eventlet.monkey_patch()
+
+PORT=1789
+HOST='localhost'
 REL_IS_LOCAL_FOR='is_local_for'
 REL_IS_BOOST_OF='is_boost_of'
 REL_IS_BOOST_OF='is_boost_of'
@@ -14,7 +20,7 @@ BLUR_MINUTES=5   # 5 minutes grace period / blur
 
 LIMNODES=30
 SCORE_TYPE = 'ExtendedSimple'
-LIM_TIMELINE=15
+LIM_TIMELINE=20
 LIM_CONVO=3
 
 
@@ -76,7 +82,6 @@ path_cogdb = os.path.join(path_data, 'db.codgb')
 app_name = 'mastotron'
 API = None
 
-from .exampledata import *
 from .utils import *
 from .mastotron import *
 from .post import *

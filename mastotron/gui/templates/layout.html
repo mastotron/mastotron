@@ -36,15 +36,18 @@
         <div id="acctname" onclick="prompt_for_username()">{{session.get('acct','')}}</div>
       </div>
 
-      <div id="optbuttons">
-        <a onclick="toggle_darkmode()">
-          <img id="nightmode" src="/static/dark-mode-6682.png" width="20" height="20" />
-        </a>
-      </div>
       
     </div>
+
+
     
     <div id="logmsg"></div>
+
+    <div id="optbuttons">
+      <a onclick="toggle_darkmode()">
+        <img id="nightmode" src="/static/dark-mode-6682.png" width="15" height="15" style="opacity:0.5"; />
+      </a>
+    </div>
 
     {% block content %}
     {% endblock %}
@@ -54,10 +57,10 @@
     {% endblock %}
 
     <div id="helper">
-    <i>Get updates</i>: 🇳 or dbl-click empty spot<br/>
-    <i>Mark read</i>: 🇷 while hovering over node<br/> 
-    <i>Load replies</i>: right-click a node<br/>
-    <i>See on site</i>: double-click node<br/>
+    To see more, mark existing posts as read by hovering over them and pressing 🇷.<br/>
+    Double-clicking a node will bring you to it in a browser.<br/>
+    Right-clicking it will bring its replies into the network.<br/>
+    Double-clicking an empty spot or pressing 🇳 will force updates.
     </div>
 
     <div id="xaxis" class="axis">X-axis: Recency ⟶</div>
