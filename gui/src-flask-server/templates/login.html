@@ -1,17 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <title>Vis Network | Node Styles | HTML in Nodes</title>
-    <style type="text/css">
-        body { font-family:Verdana, Geneva, Tahoma, sans-serif}
-        h1 { font-size:1.5em; }
-    </style>
-  </head>
-  <body>
-    <h1>Authenticate mastodon account</h1>
-    <form method="GET">
-        <input name="account" value="{{acct}}">
-        <input type="submit" value="Login">
-    </form>
+{% extends "layout.html" %}
 
-</body>
+{% block head %}
+{% endblock %}
+
+{% block content %}
+{% endblock %}
+
+
+{% block foot %}
+<script type="text/javascript">
+$(document).ready(function() { prompt_for_username(); });
+</script>
+{% endblock %}

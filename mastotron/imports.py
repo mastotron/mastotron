@@ -14,12 +14,13 @@ BLUR_MINUTES=5   # 5 minutes grace period / blur
 
 LIMNODES=30
 SCORE_TYPE = 'ExtendedSimple'
-LIM_TIMELINE=10
-LIM_CONVO=5
+LIM_TIMELINE=15
+LIM_CONVO=3
 
 
 import os,sys; sys.path.insert(0,'..')
 from pprint import pprint, pformat
+import textwrap
 import numpy as np
 from functools import cached_property, lru_cache, total_ordering
 cache = lru_cache(maxsize=None)

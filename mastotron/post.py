@@ -415,11 +415,12 @@ class PostModel(DictModel):
                     
     
 
-    def get_html(self, allow_embedded=False, server=None):
+    def get_html(self, allow_embedded=False, local_server=''):
         from .htmlfmt import post_to_html
         return post_to_html(
             self, 
             allow_embedded=allow_embedded,
+            local_server=local_server
         )
     
     @property
@@ -504,12 +505,26 @@ class PostModel(DictModel):
 
     @property
     def text(self):
-        return unhtml(self.content).strip()
+        import html
+        return unhtml(html.unescape(self.content)).strip()
 
     @property
     def label(self): return self.get_label()
 
-    def get_label(self, limsize=40, limwords=4, replace_urls=True):
+    def get_label(self, limsize=30, max_lines=4, **kwargs):
+        text = self.text
+        for url in find_urls(text): text=text.replace(url,url[:20])
+        
+        lines = textwrap.wrap(text,limsize)
+        if max_lines and len(lines)>max_lines:
+            lines=lines[:max_lines]
+            lines[-1]+='...'
+        
+        stext='\n'.join(lines)        
+        return stext
+
+
+    def get_label_orig(self, limsize=40, limwords=4, replace_urls=True):
         import html
         #stext = self.spoiler_text
         #if not stext: 
@@ -549,18 +564,18 @@ class PostModel(DictModel):
         # if self.source: od={**od, **self.source.data}
         return od
 
-    @cached_property
-    def node_data(post):
-
+    def get_node_data(post, local_server=''):
         odx={}
         odx['_id'] = post._id
         odx['id'] = post._id
-        odx['html'] = post.get_html(allow_embedded=False)
+        odx['html'] = post.get_html(allow_embedded=False, local_server=local_server)
+        odx['url_local'] = getlocurl(post._id, local_server) if local_server else post._id
         odx['shape'] = 'circularImage' # if not same_author else 'box'
         # odx['shape'] = 'image'
         odx['image'] = post.author.avatar
         # odx['image'] = post_to_svg(post)
-        odx['label']=post.get_label(limsize=50) if not post.is_boost else ''
+        # odx['label']=post.get_label(limsize=70, limwords=7) if not post.is_boost else 'RT'
+        odx['label']=post.label
         odx['text'] = post.text if not post.is_boost else 'RT'
         odx['node_type']='post'
         odx['scores'] = post.scores
@@ -572,5 +587,6 @@ class PostModel(DictModel):
         odx['is_reply']=post.is_reply
         odx['is_boost']=post.is_boost
         return odx
+
 
 

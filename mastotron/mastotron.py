@@ -61,7 +61,12 @@ class Mastotron():
         path_user_secret = self._get_path_user_auth(account_name)
         return os.path.exists(path_user_secret)
 
-    def api_user(self, account_name, code=None):
+    def user_auth_url(self, account_name):
+        un,server = parse_account_name(account_name)
+        api = self.api(server)
+        return api.auth_request_url()
+
+    def api_user(self, account_name, code=None, direct_input=False):
         un,server = parse_account_name(account_name)
         path_user_secret = self._get_path_user_auth(account_name)
         if not os.path.exists(path_user_secret):
@@ -72,8 +77,11 @@ class Mastotron():
         
             if not code:
                 url=api.auth_request_url()
-                webbrowser.open(url)
-                code = input('Paste the code from the browser:\n')
+                if not direct_input:
+                    return url
+                else:
+                    webbrowser.open(url)
+                    code = input('Paste the code from the browser:\n')
             
             api.log_in(code = code, to_file = path_user_secret)
             return api
@@ -360,22 +368,27 @@ class Mastotron():
 
         cache=self.cache('timeline_minute')
         if force or not dkey in cache:
-            # print('?',dkey)
+            print('?',dkey)
 
             min_id = ( int( dtime1.timestamp() ) << 16 ) * 1000
             max_id = ( int( dtime2.timestamp() ) << 16 ) * 1000
 
             api = self.api_user(account_name)
+            # print('??',dkey)
+            # print(f'timeline = api.timeline(max_id={max_id}, min_id={min_id}, **{timeline_opts})')
             timeline = api.timeline(max_id=max_id, min_id=min_id, **timeline_opts)
+            # print(f'len(timeline) -> {len(timeline)}')
             posts=PostList(timeline)
+            # print(f'len(posts) -> {len(posts)}')
             if save: cache[dkey] = [p._id for p in posts]
             return posts
         
         return PostList(cache.get(dkey))
 
 
-    def timeline_iter(self, account_name='', timestamp=None, minute_blur=BLUR_MINUTES, **kwargs):
+    def timeline_iter(self, account_name='', timestamp=None, minute_blur=BLUR_MINUTES, incl_now=False,**kwargs):
         iterr=iter_datetimes(timestamp, minute_blur=minute_blur)
+        if not incl_now: next(iterr)
 
         for dtobj in iterr:
             posts = self.timeline_minute(
@@ -390,10 +403,13 @@ class Mastotron():
     def timeline(self, account_name='', lim=LIM_TIMELINE, **y):
         return PostList(self.timeline_iter(account_name, **y), lim=lim)
     
-    def timeline_unread(self, account_name='', lim=LIM_TIMELINE, **y):
+    def timeline_unread_iter(self, account_name='', **y):
         def is_unread(p): return p.is_read is not True
-        return self.timeline_filtered(account_name, filter_func=is_unread, lim=lim, **y)
+        return self.timeline_filtered_iter(account_name, filter_func=is_unread, **y)
 
-    def timeline_filtered(self, account_name='', filter_func=lambda x:x, lim=LIM_TIMELINE, **y):
+    def timeline_filtered_iter(self, account_name='', filter_func=lambda x:x, lim=LIM_TIMELINE, **y):
         iterr = (p for p in self.timeline_iter(account_name, **y) if filter_func(p))
-        return PostList(iterr, lim=lim)
+        return iterr
+    
+    def timeline_unread(self, account_name='', lim=LIM_TIMELINE, **y):
+        return PostList(self.timeline_unread_iter(account_name, **y), lim=lim)

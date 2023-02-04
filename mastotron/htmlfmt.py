@@ -25,7 +25,7 @@ def to_html(x, **y):
 #                 <p>Post ID: <a href="{self._id}" target="_blank">{self.id}</a></p>
 
 
-def post_to_html(self, allow_embedded = True, url=None, **y): 
+def post_to_html(self, allow_embedded = True, url=None, local_server='', **y): 
     datestr=f'<a href="{self._id}" target="_blank">{self.datetime_str_h}</a>'
     austr=f'<img class="post_avatarimg" src="{self.author.avatar}" width="50px" height="50px" /><a href="{self._id}" target="_blank">{self.author.display_name}</a> ({self.author.followers_count:,} 👥)'
     imgs_urls = [d.get('preview_url') for d in self.media_attachments] if self.media_attachments else []
@@ -55,6 +55,7 @@ def post_to_html(self, allow_embedded = True, url=None, **y):
     uristr=f''
     # stats
     url = self.url if self.url else self.uri
+    localurl = f'https://{local_server}/authorize_interaction?uri={url}' if local_server else url
     stats_str = f'''
         <div class="post_stats">
             {self.replies_count:,} 🗣
@@ -65,9 +66,7 @@ def post_to_html(self, allow_embedded = True, url=None, **y):
             |
             <span class="post_uristr"><a href="{self.urli}" target="_blank">URI</a></span>
             |
-            Read: {self.is_read}
-            |
-            <span class="post_uristr"><a href="{self._id}" target="_blank">Posted {self.datetime_str_h}</a></span>
+            <span class="post_uristr">Posted <a href="{localurl}" target="_blank">{self.datetime_str_h}</a></span>
         </div>
     ''' if not self.is_boost else f'''
         <div class="post_stats">

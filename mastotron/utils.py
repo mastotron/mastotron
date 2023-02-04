@@ -1,6 +1,8 @@
 from .imports import *
 
 
+def getlocurl(url,server):
+    return f'https://{server}/authorize_interaction?uri={url}'
 
 def get_api():
     global API
@@ -11,6 +13,11 @@ def set_api(mastotron_obj):
     API = mastotron_obj
 
 
+def clean_account_name(acct):
+    un,server=parse_account_name(acct)
+    if un and server:
+        return f'{un}@{server}'
+    return ''
 
 def parse_account_name(acct):
     un, server = '', ''
@@ -197,3 +204,14 @@ def blurtime(dtobj, minute_blur=BLUR_MINUTES):
         hour=dtobj.hour,
         minute=dtobj.minute // minute_blur * minute_blur,
     )
+
+
+def find_urls(string):
+    import re
+
+    # findall() has been used
+    # with valid conditions for urls in string
+    regex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
+    url = re.findall(regex, string)
+    return [x[0] for x in url]
+
