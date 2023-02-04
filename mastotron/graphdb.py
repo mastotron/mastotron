@@ -1,5 +1,4 @@
 from .imports import *
-from tinydb import TinyDB, Query
 
 class GraphDB:
     def __init__(self, account_name_or_mastotron_obj, name='graphdb'):
@@ -13,16 +12,8 @@ class GraphDB:
         else:
             raise Exception('Must provide either a string for an account name or a mastotron object.')
 
-        # import networkdisk as nd
-        # self._G = nd.sqlite.DiGraph(db=self.path, name='graphdb')
         from cog.torque import Graph
         self._g = Graph(self.name, cog_home=os.path.basename(self.path_g), cog_path_prefix=os.path.dirname(self.path_g))
-        
-        # from sqlitedict import SqliteDict
-        # self._db = SqliteDict(self.path_db, autocommit=True)
-        # self._db.create_or_load_namespace(f"{self.name}_ns")
-        # self._db.create_table(f"{self.name}_db", f"{self.name}_ns")
-        # self._db = TinyDB(self.path_db)
         
 
     @property

@@ -19,13 +19,18 @@ LIM_CONVO=3
 
 
 import os,sys; sys.path.insert(0,'..')
+
+path_self = os.path.realpath(__file__)
+path_gui = os.path.abspath(os.path.join(path_self,'..','..','gui'))
+path_code = os.path.abspath(os.path.join(path_self,'..','..'))
+path_web = os.path.abspath(os.path.join(path_self,'..','..','gui','src-flask-server'))
+
 from pprint import pprint, pformat
 import textwrap
 import numpy as np
 from functools import cached_property, lru_cache, total_ordering
 cache = lru_cache(maxsize=None)
 from typing import Optional,Union,Dict,List
-from sqlmodel import Field, Session, SQLModel, create_engine, select, Relationship
 import numpy as np
 from mastodon.errors import MastodonNotFoundError, MastodonNetworkError
 from mastodon.utility import AttribAccessDict
@@ -47,7 +52,6 @@ def unhtml(x):
 import networkx as nx
 import pandas as pd
 import warnings
-from tinydb import Query, TinyDB
 from sqlitedict import SqliteDict
 warnings.filterwarnings('ignore')
 import requests
