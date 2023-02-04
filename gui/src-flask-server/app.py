@@ -17,10 +17,9 @@ STARTED=None
 new_urls = set()
 
 
-def logmsg(x):
-    log.debug(x)
-    emit('logmsg',str(x))
-
+def logmsg(x): emit('logmsg',str(x))
+def logsuccess(x): emit('logsuccess',str(x))
+def logerror(x): emit('logerror',str(x))
 
 #####
 app = Flask(__name__)
@@ -35,8 +34,11 @@ socketio = SocketIO(app, manage_session=False, async_mode="threading")
 @app.route("/hello/")
 @app.route("/hello-vue/")
 def postnet(): 
-    if not session.get('account'): session['account']='heuser@zirk.us'
-    return render_template('postnet.html', account=session.get('account',''))
+    acct=session.get('acct')
+    if not acct or not Tron().user_is_init(acct): 
+        return render_template('login.html')
+    
+    return render_template('postnet.html', acct=acct, minnodes=LIM_TIMELINE)
 
 @app.route('/hello//flaskwebgui-keep-server-alive')
 @app.route('/hello/flaskwebgui-keep-server-alive')
@@ -47,20 +49,38 @@ def keepalive():
 @socketio.event
 def set_acct_name(data):
     tron = Tron()
-    acct = data.get('account')
+    acct = clean_account_name(data.get('acct'))
     if acct:
-        session['account'] = acct
+        session['acct'] = acct
         if not tron.user_is_init(acct):
-            logmsg('Please enter activation code')
-            emit('get_auth_url', {'url':tron.auth_request_url()} )
-        # else:
-            # logmsg(f'logged in as {acct}')
+            try:
+                url = tron.user_auth_url(acct)
+                logmsg('Please enter activation code')
+                emit('get_auth_url', {'acct':acct,'url':url} )
+            except Exception as e:
+                un,server=parse_account_name(acct)
+                emit('server_not_giving_code', {'server':server, 'acct':acct})
+    else:
+        emit('invalid_user_name', data)
+        
+
+@socketio.event
+def do_login(data):
+    tron = Tron()
+    acct = data.get('acct')
+    code = data.get('code')
+    if acct and code:
+        tron.api_user(acct, code=code, direct_input=False)
+        if tron.user_is_init(acct):
+            logmsg(f'{acct} logged in')
+            emit('login_succeeded', dict(acct=acct))
+        else:
+            logmsg(f'{acct} NOT logged in')
+            emit('login_failed', dict(acct=acct))
 
 
-
-
-def get_acct_name(data={}): return session.get('account')
-def get_srvr_name(data={}): return get_acct_name().split('@')[-1].strip()
+def get_acct_name(data={}): return session.get('acct')
+def get_srvr_name(data={}): return parse_account_name(get_acct_name())[-1]
 
 
 
@@ -77,6 +97,7 @@ class NodeListener(StreamListener):
 
 @socketio.event
 def start_updates(data={}):
+    # return
     global seen_posts, STARTED
     seen_posts = set()
     if not STARTED:
@@ -95,29 +116,52 @@ def get_pushes(data={}):
     new_urls = set()
     update_posts(
         new_posts, 
-        omsg='push updated',
-        ids_done=set(data.get('ids_now',[]))
+        omsg='push updated'
     )
-        
+
+
+@socketio.event
+def get_updates_orig(data={}):
+    acct = get_acct_name()
+    if not acct: return
+    unread_only = data.get('unread_only',True)
+    lim = data.get('lim',LIM_TIMELINE)
+    tl = Tron().timeline_unread(acct, lim=LIM_TIMELINE, incl_now=False, unread_only=unread_only)
+    update_posts(tl)
+
 
 
 @socketio.event
 def get_updates(data={}):
     acct = get_acct_name()
     if not acct: return
-    tl = Tron().latest(acct, lim=LIM_TIMELINE)
-    update_posts(
-        tl,
-        omsg='timeline updated',
-        ids_done=set(data.get('ids_now',[]))
-    )
+    unread_only = data.get('unread_only',True)
+    lim = data.get('lim',LIM_TIMELINE)
+    i=0
+    batchsize=1
+    l=[]
+    for post in Tron().timeline_iter(acct):
+        if not unread_only or not post.is_read:
+            i+=1
+            l.extend(post.convo)
+            if len(l)>=batchsize:
+                update_posts(PostList(l))
+                l=[]
+                # time.sleep(.5)
+            if i>=lim: 
+                if l: update_posts(PostList(l))
+                break
+
+
+
+    # update_posts(tl,omsg='timeline updated',ids_done=set(data.get('ids_now',[])))
         
 
 
 def update_posts(tl, omsg='refreshed', emit_key='get_updates',ids_done=None,unread_only=True):
     if len(tl):
         tnet = tl.network()
-        nx_g = tnet.graph()
+        nx_g = tnet.graph(local_server=get_srvr_name())
         nx_g.remove_nodes_from(
             n 
             for n,d in list(nx_g.nodes(data=True))
@@ -142,8 +186,9 @@ def update_posts(tl, omsg='refreshed', emit_key='get_updates',ids_done=None,unre
 def add_context(node_id):
     print('add_context',node_id)
     post = Post(node_id)
-    unread_convo = PostList(p for p in post.convo if not p.is_read)
-    update_posts(unread_convo[:LIM_TIMELINE])
+    if post:# unread_convo = PostList(p for p in post.convo if not p.is_read)
+        convo = post.convo
+        update_posts(convo[:LIM_TIMELINE])
 
 
 
@@ -170,17 +215,6 @@ def mark_as_read(node_ids):
 
 
 
-
-
-
-def get_edge_data(obj1, obj2, rel, **kwargs):
-    return { 
-        'id':f'{obj1._id}__{rel}__{obj2._id}',
-        'from':obj1._id,
-        'to':obj2._id, 
-        'edge_type':rel,
-        **kwargs
-    }
 
 
 def send_update(nodes=[], edges=[]):

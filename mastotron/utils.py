@@ -1,6 +1,8 @@
 from .imports import *
 
 
+def getlocurl(url,server):
+    return f'https://{server}/authorize_interaction?uri={url}'
 
 def get_api():
     global API
@@ -11,6 +13,11 @@ def set_api(mastotron_obj):
     API = mastotron_obj
 
 
+def clean_account_name(acct):
+    un,server=parse_account_name(acct)
+    if un and server:
+        return f'{un}@{server}'
+    return ''
 
 def parse_account_name(acct):
     un, server = '', ''
@@ -96,17 +103,6 @@ def test_encodeURIComponent():
 
 
 
-svg_str='''<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect x="0" y="0" width="100%" height="100%" fill="#7890A7" stroke-width="5" stroke="#ffffff" ></rect><foreignObject x="1" y="1" width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="font-size:40px">[[HTML]]</div></foreignObject></svg>'''
-
-
-def get_svg_url(svg_str):
-    return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg_str)
-
-
-
-
-
-
 def tokenize(text):
     """
     Split a text into tokens (words, morphemes we can separate such as
@@ -166,10 +162,13 @@ def get_datetime_str():
 def get_time_str():
     return str(dt.datetime.now()).split('.',1)[0].split()[-1]
 
-def get_graphtime_str(timestamp=None, minute_blur=GRAPHTIME_ROUNDBY):
+def get_graphtime_str(timestamp=None, minute_blur=BLUR_MINUTES):
     now=get_now(timestamp)
     minute=now.minute // minute_blur * minute_blur
-    return f'{now.year:04}-{now.month:02}-{now.day:02} {now.hour:02}:{minute:02}'
+    upminute=minute+minute_blur
+    # return f'{now.year:04}-{now.month:02}-{now.day:02} {now.hour:02}:{minute:02}'
+
+    return f'{now.year:04}/{now.month:02}/{now.day:02} {now.hour:02}:{minute:02}-{upminute:02}'
     
 def get_now(timestamp=None):
     return (
@@ -178,12 +177,41 @@ def get_now(timestamp=None):
         else dt.datetime.now()
     )
 
-def iter_graphtimes(timestamp=None, by=GRAPHTIME_ROUNDBY, max_days=365):
+def iter_graphtimes(timestamp=None, minute_blur=BLUR_MINUTES, max_days=7):
     now = get_now(timestamp)
     current_time = now
     while True:
         yield get_graphtime_str(timestamp=current_time.timestamp())
-        current_time -= dt.timedelta(minutes=GRAPHTIME_ROUNDBY)
+        current_time -= dt.timedelta(minutes=minute_blur)
         if abs(now - current_time) > dt.timedelta(days=max_days):
             break
+
+
+def iter_datetimes(timestamp=None, minute_blur=BLUR_MINUTES, max_days=7):
+    now = get_now(timestamp)
+    current_time = blurtime(now)
+    while True:
+        yield current_time
+        current_time -= dt.timedelta(minutes=minute_blur)
+        if abs(now - current_time) > dt.timedelta(days=max_days):
+            break
+
+def blurtime(dtobj, minute_blur=BLUR_MINUTES):
+    return dt.datetime(
+        year=dtobj.year,
+        month=dtobj.month,
+        day=dtobj.day,
+        hour=dtobj.hour,
+        minute=dtobj.minute // minute_blur * minute_blur,
+    )
+
+
+def find_urls(string):
+    import re
+
+    # findall() has been used
+    # with valid conditions for urls in string
+    regex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
+    url = re.findall(regex, string)
+    return [x[0] for x in url]
 

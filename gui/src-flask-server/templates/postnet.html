@@ -1,70 +1,18 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <title>mastotron</title>
+{% extends "layout.html" %}
 
-    <link rel="stylesheet" href="/static/jquery.flash.css">
-    <link rel="stylesheet" href="/static/jquery-ui.css">
-    <link rel="stylesheet" href="/static/postnet.css">
-
-    <script type="text/javascript">
-      var DARKMODE = {{session.get('DARKMODE',0)}};
-    </script>
-
-    <script type="text/javascript" src="/static/vis-network.min.js"></script>
-    <script type="text/javascript" src="/static/jquery-latest.min.js"></script>
-    <script type="text/javascript" src="/static/jquery-ui.js"></script>
-    <script type="text/javascript" src="/static/jquery.flash.js"></script>
-    <script type="text/javascript" src="/static/socket.io.js"></script>
-    <script type="text/javascript" src="/static/utils.js"></script>
-
-    
-          
-  </head>
-
-  <body>
-    <div id="header">
-      mastotron v0.3
-
-      <div id="config">
-        <!-- <form id="configform">
-          <div id="configform_account_div">
-            <input id="configform_account" name="account" value="{{session.get('account','')}}" placeholder="mastodonuser@mastodonserver.com"></input>
-          </div>
-
-          <div id="configform_code_div" hidden>
-            <input id="configform_code" name="code" value="" placeholder="Enter authentication code"></input>
-          </div>
-          
-        </form> -->
-        <div id="acctname">{{session.get('account','')}}</div>
-      </div>
-
-      <div id="optbuttons">
-        <a onclick="toggle_darkmode()">
-          <img id="nightmode" src="/static/dark-mode-6682.png" width="20" height="20" />
-        </a>
-      </div>
-      
-    </div>
-
-    <div id="logmsg"></div>
-  
-    <center>
-      <div id="postnetviz"></div>
-    </center>
-    
-    <div id="tweet" hidden></div>
+{% block head %}
+<script type="text/javascript">
+    var minnodes = {{ minnodes }};
+</script>
+{% endblock %}
 
 
+{% block content %}
+<div id="postnetviz"></div>
+<div id="tweet" hidden></div>
+{% endblock %}
 
-    <script style="text/javascript" src="/static/login.js"></script>
-    <script type="text/javascript" src="/static/postnet.js"></script>
 
-     
-    <!-- <div id="slider">
-      <div id="custom-handle" class="ui-slider-handle"></div>
-    </div> -->
-    
-  </body>
-</html>
+{% block foot %}
+<script type="text/javascript" src="/static/postnet.js"></script>
+{% endblock %}

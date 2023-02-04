@@ -1,16 +1,39 @@
 body {
 font: 10pt arial;
 color: black;
-width:100vw;
-height:100vh;
+width:120vw;
+height:200vh;
 /* background-color: white;  */
 background-color: #eeeeee;
 /* background-color: black;  */
 /* background-color: #041e2e; */
 /* background-color: #010b12; */
 }
-div { margin: 0; padding: 0; }
-  
+body::-webkit-scrollbar {
+    display: none;
+  }
+/* div { margin: 0; padding: 0; } */
+#helper {
+    bottom:5px;
+    right:5px;
+    color:gray;
+    /* width:400px; */
+    position: fixed;
+
+}
+
+#logindiv {
+    top:0;bottom:0;right:0;left:0;
+    margin: auto;
+    width:200px;
+    height:200px;
+    background-color: red;
+}
+#logindiv h1 { font-size:1.2em; margin-bottom:1em;}
+
+
+
+
 .light-mode {
     
     color: black;
@@ -23,7 +46,7 @@ div { margin: 0; padding: 0; }
 a { color: lightblue; }
 #acctname { font-size: 11pt; }
 #header {
-    position:absolute;
+    position:fixed;
     top:5px;
     left:5px;
     vertical-align: middle;
@@ -38,7 +61,7 @@ font: 10pt arial;
 top:5px;
 right:5px;
 text-align:right;
-position:absolute;
+position:fixed;
 color:gray;
 }
 
@@ -154,3 +177,22 @@ font-size:13pt;
     line-height: 1.6em;
   }
   
+
+.axis {
+    color:gray;
+    font-size:1em;
+    /* letter-spacing: .25em; */
+    position: fixed;
+    left:0;
+    bottom: 0;
+}
+
+#xaxis { 
+    left:1.25em;
+}
+
+#yaxis { 
+    left: -4em;
+    bottom: 5em;
+    transform: rotate(-90deg);
+}

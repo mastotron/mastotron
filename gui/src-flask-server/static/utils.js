@@ -1,10 +1,3 @@
-async function getRequest(url = '') {
-    const response = await fetch(url, {
-        method: 'GET',
-        cache: 'no-cache'
-    })
-    return response.json()
-}
 document.addEventListener('DOMContentLoaded', function () {
     let url = document.location
     let route = "/flaskwebgui-keep-server-alive"
@@ -19,18 +12,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
 var socket = io();
 socket.on('connect', function() {
-    socket.emit('my_event', {data: 'I\'m connected!'});
     console.log('connected!');
 });
-
-
-function popupwindow(url, title, w, h) {
-var left = (screen.width/2)-(w/2);
-var top = (screen.height/2)-(h/2);
-return window.open(url, title, 'toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=no, resizable=no, copyhistory=no, width='+w+', height='+h+', top='+top+', left='+left);
-}
-
-
 
 socket.on('logmsg', function(e){
     console.log('logmsg', e);
@@ -38,8 +21,30 @@ socket.on('logmsg', function(e){
     logmsg(msg);
 });
 
+socket.on('logerror', function(e) { pb.error(e); })
+socket.on('logsuccess', function(e) { pb.success(e); })
+socket.on('loginfo', function(e) { pb.info(e); })
+
+
+
+
+
+
+
+
+
+
+function popupwindow(url, title, w, h) {
+    var left = (screen.width/2)-(w/2);
+    var top = (screen.height/2)-(h/2);
+    return window.open(url, title, 'toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=no, resizable=no, copyhistory=no, width='+w+', height='+h+', top='+top+', left='+left);
+}
+
+
+
+
 function logmsg(x) {
-    console.log('logmsg',x);
+    // console.log('logmsg',x);
     // $.flash(x);
     $('#logmsg').html(x);
 }
@@ -70,4 +75,69 @@ function get_time_str() {
         ("0" + m.getUTCMinutes()).slice(-2) + ":" +
         ("0" + m.getUTCSeconds()).slice(-2);
     return dateString;
+}
+
+
+
+function moveNodeAnim(nodeId, finX, finY, duration) {
+    let startPos = network.getPositions([nodeId])[nodeId];
+    let startX = startPos.x;
+    let startY = startPos.y;
+    let startTime = performance.now();
+    let _duration = duration || 1000;
+
+    let move = (function () {
+        let time = performance.now();
+        let deltaTime = (time - startTime) / _duration;
+        let currentX = startX + ((finX - startX) * deltaTime);
+        let currentY = startY + ((finY - startY) * deltaTime);
+
+        if (deltaTime >= 1) {
+            network.moveNode(nodeId, finX, finY);
+        } else
+        {
+            network.moveNode(nodeId, currentX, currentY);
+            window.requestAnimationFrame(move);
+        }
+    });
+
+    // if((startX!=finX) | (startY !=finY)) {
+    move();
+    // }
+
+}
+function smudge(x, fac=100) {
+    y = Math.random() * fac;
+    if (Math.random() > 5) { y=-1*x; }
+    return x + y;
+}
+
+
+
+function getIndexToIns(arr, num) {
+    // Sort arr from least to greatest.
+      let sortedArray = arr.sort((a, b) => a - b)
+    //                  [40, 60].sort((a, b) => a - b)
+    //                  [40, 60]
+  
+    // Compare num to each number in sortedArray
+    // and find the index where num is less than or equal to 
+    // a number in sortedArray.
+      let index = sortedArray.findIndex((currentNum) => num <= currentNum)
+    //            [40, 60].findIndex(40 => 50 <= 40) --> falsy
+    //            [40, 60].findIndex(60 => 50 <= 60) --> truthy
+    //            returns 1 because num would fit like so [40, 50, 60]
+  
+    // Return the correct index of num.
+    // If num belongs at the end of sortedArray or if arr is empty 
+    // return the length of arr.
+      return index === -1 ? arr.length : index
+  }
+
+async function getRequest(url = '') {
+    const response = await fetch(url, {
+        method: 'GET',
+        cache: 'no-cache'
+    })
+    return response.json()
 }

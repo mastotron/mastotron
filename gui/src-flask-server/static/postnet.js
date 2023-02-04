@@ -1,4 +1,5 @@
 // vars
+var FIXED = {x:false,y:false}
 var MODE = 'default';
 var SCORE_TYPE = 'ExtendedSimple';
 var darkbgcolor = 'rgb(20,20,23)'; //#28282B';
@@ -45,7 +46,7 @@ var options = {
       }
     },
     smooth: {
-      enabled: false,
+      enabled: true,
       type: "dynamic",
       roundness: 0.5
     },
@@ -86,10 +87,10 @@ var options = {
     enabled: true,
     forceAtlas2Based: {
       theta: 0.5,
-      gravitationalConstant: -50,
-      centralGravity: 0.01,
+      gravitationalConstant: 0,
+      centralGravity: 0.001,
       springConstant: 0.08,
-      springLength: 100,
+      springLength: 1000,
       damping: 1,
       avoidOverlap: 1
     },
@@ -101,18 +102,33 @@ var options = {
       damping: 1,
       avoidOverlap: 1
     },
-    
-    maxVelocity: 5,
-    minVelocity: .1,
-    solver: 'forceAtlas2Based',
+    barnesHut: {
+      theta: 0.5,
+      gravitationalConstant: 0.00001,
+      centralGravity: 0.3,
+      springLength: 95,
+      springConstant: 0.0,
+      damping: 0.09,
+      avoidOverlap: 1
+    },
+    repulsion: {
+      centralGravity: 0.0005,
+      springLength: 200,
+      springConstant: 0.05,
+      nodeDistance: 100,
+      damping: 0.09
+    },    
+    maxVelocity: 1,
+    minVelocity: .5,
+    solver: 'repulsion',
     stabilization: {
-      enabled: false,
-      iterations: 1000,
+      enabled: true,
+      iterations: 2000,
       updateInterval: .1,
       onlyDynamicEdges: false,
       fit: true
     },
-    timestep: .2,
+    timestep: 1,
     adaptiveTimestep: true,
     // wind: { x: 0, y: -100 }
   },
@@ -175,7 +191,7 @@ function show_status_div(params) {
   node_d = get_node(params);
   node_pos = network.getPosition(node_d.id);
   node_pos_web = network.canvasToDOM(node_pos);
-  _offset = 20;
+  _offset = 10;
   $('#tweet').html(node_d['html']);  
   x = node_pos_web['x'];
   y = node_pos_web['y'];
@@ -190,14 +206,6 @@ function show_status_div(params) {
 }
 
 function hide_status_div() { $('#tweet').fadeOut(500); }
-
-function nodes_to_ids(_nodes) {
-  _nodes_ids = [];
-  _nodes.forEach(function(_node) {
-    _nodes_ids.push(_node.id); 
-  })
-  return _nodes_ids;
-}
 
 
 function getdownstreamnodes(node_id, recurse=2) {
@@ -227,13 +235,22 @@ function del_node(node_id, recursive = true) {
   }
 
   del_nodes(node_ids_to_del);
-  request_pushes();
-  request_updates();
 
-  // logmsg('marked '+node_id+' as read');
+  if (nodes.length < minnodes) {
+    request_updates();
+  }
+  //  else {
+    style_nodes();
+  // }
+
+  
+    
+  logmsg('marked '+node_id+' as read');
 }
 
 function del_nodes(node_ids) {
+  hide_status_div();
+
   if (node_ids.length>0) {
     socket.emit('mark_as_read',node_ids);
     nodes.remove(node_ids);
@@ -269,9 +286,9 @@ function lim_nodes_by_time() {
 }
 
 function lim_nodes() {
-  return;
-  // console.log('num nodes',nodes.length);
   if (nodes.length > limnodesgraph) {
+    console.log('<< lim_nodes','num nodes',nodes.length);
+
     todel=[];
     iter_nodes_d().slice(
       0, nodes.length - limnodesgraph
@@ -279,14 +296,15 @@ function lim_nodes() {
       function(n){todel.push(n.id)}
     );
     nodes.remove(todel);
+    console.log('>> lim_nodes','num nodes',nodes.length);
   }
-  // console.log('num nodes',nodes.length);
 }
 
 function update_nodes(data) {
-  // unfreeze_nodes();
+  // freeze_nodes();
   nodes.update(data.nodes);
   edges.update(data.edges);
+  // unfreeze_nodes();
   style_edges();
   lim_nodes();
   style_nodes();
@@ -301,13 +319,12 @@ function fix_nodes() {
   // console.log('fix_nodes')
   iter_nodes().forEach(function(n){
     nd=nodes.get(n.id);
-    nd['x']=n.x;
-    nd['y']=n.y;
-    nd['fixed']={x:false,y:true}
-  //   // console.log(nd.x, nd.y, n.x, n.y,nd.fixed);
-  //   // nodes.update(nd);
-  //   // nd['fixed']={x:false,y:true}
-    nodes.update(nd);
+    if(nd) {
+      nd.x=n.x;
+      nd.y=n.y;
+      nd.fixed=FIXED;
+      // nodes.update(nd);
+    }
   });
 }
 
@@ -322,7 +339,7 @@ function freeze_nodes() {
 }
 function unfreeze_nodes() {
   nodes.forEach(function(nd){
-    nd['fixed']={x:false,y:false}
+    nd['fixed']=FIXED;
     nodes.update(nd);
   })
 }
@@ -421,11 +438,12 @@ function scaleBetween(unscaledNum, minAllowed, maxAllowed, min, max) {
   return (maxAllowed - minAllowed) * (unscaledNum - min) / (max - min) + minAllowed;
 }
 
-function size_nodes(max_size=40, min_size=20, score_type=SCORE_TYPE, size_by='score') {
+function size_nodes(max_size=40, min_size=20, score_type=SCORE_TYPE, size_by='num_replies') {
   vals = get_all(size_by);
   nodes.forEach(function(nd) {
-    nd.size = rankBetween(nd[size_by], vals, min_size, max_size);
-    nodes.update(nd);
+    newsizeby = nd[size_by] - network.getConnectedNodes().length;
+    nd.size = rankBetween(newsizeby, vals, min_size, max_size);
+    // nodes.update(nd);
   })
 }
 
@@ -501,15 +519,40 @@ socket.emit('set_darkmode', DARKMODE);
 
 // NETWORK EVENTS
 
+let OK_TO_DEL_ON_BLUR = false;
+
 network.on("hoverNode", function (params) {
+
   node_d = get_node(params);
+  // console.log(node_d.id, 'ok to del?', node_d.ok_to_del);
+  node_d['ok_to_del']=false;
+  nodes.update(node_d);
   network.selectNodes([node_d.id]); 
+  
   show_status_div(params);
+  show_status_div(params);
+  show_status_div(params);
+
+  setTimeout(function(){ 
+    node_d=nodes.get(node_d.id);
+    if (node_d) {
+      node_d['ok_to_del']=true;
+      nodes.update(node_d);
+    }
+  }, 500);
 });
-// network.on("blurNode", function (params) {
-  // hide_status_div();
-  // network.unselectAll();
-// });
+
+network.on("blurNode", function (params) {
+  network.unselectAll();
+  hide_status_div();
+
+  // node_d = get_node(params);
+  // if (node_d!=undefined) {
+  //   if (node_d.ok_to_del & (MODE=='markread')) {
+  //     del_node(node_d.id);
+  //   }
+  // }
+});
 // network.on("dragEnd", function (params) {
 //   nodes.forEach(function(nd){nd.fixed={x:false,y:true}; nodes.update(nd)});
 // });
@@ -548,7 +591,7 @@ network.on("doubleClick", function (params) {
   console.log('double clicked');
   node_d = get_node(params);
   if (node_d != undefined) {
-    window.open(node_d.id, '_blank');
+    window.open(node_d.url_local, '_blank');
   } else {
     request_updates();
   }
@@ -561,7 +604,7 @@ network.on("oncontext", function (params) {
   if (node_d != undefined) {
     // del_node(node_d.id);
     // window.open(node_d.id, '_blank');
-    add_context(node_d);
+    add_context(node_d.id);
   }
 });
 
@@ -582,6 +625,7 @@ function request_pushes() {
 }
 
 socket.on('get_updates', function(data) {
+  console.log('got updates:',data);
   if(data.logmsg){logmsg(data.logmsg);}
   update_nodes(data); 
 });
@@ -627,7 +671,7 @@ function toggle_mode_info() {
 
 
 $(document).on('keydown', function (event) {
-  // console.log(event);
+  console.log('event.which =',event.which);
   if (event.which==27) {   // escape
     set_mode_default();
     network.unselectAll();
@@ -639,28 +683,38 @@ $(document).on('keydown', function (event) {
       node_ids = [];
       iter_nodes_d().forEach(function(nd){node_ids.push(nd.id)});
       network.selectNodes(node_ids);
-    } else {
-      set_mode_markread();
-      // toggle_mode_read();
+    } 
+    else if (event.which == 82) {
+      // command r
+      // event.preventDefault();
+      // request_updates();
     }
+
+    // } else {
+      // r (refresh)
+      // set_mode_markread();
+      // toggle_mode_read();
+    // }
   } else if (event.altKey) {
     // toggle_mode_info();
-    set_mode_getcontext();
-  } else if ((event.which==88) | (event.which==82)) { // x or r
+    // set_mode_getcontext();
+  } else if ((event.which==88) | (event.which==82) | (event.which==8) | (event.which==46)) { // x or r or backspace or del
     // del_nodes(network.getSelectedNodes());
     network.getSelectedNodes().forEach(function(n){
       console.log(n);
       del_node(n);
     })
+  } else if (event.which==78) {  // n
+    request_updates();
   }
   // else {
     // set_mode_default()
   // }   
 });
 
-$(document).on('keyup', function (event) {
-  set_mode_default();
-});
+// $(document).on('keyup', function (event) {
+//   set_mode_default();
+// });
 
 
 
@@ -669,101 +723,46 @@ function get_edge_ids() {
   for ( edge of iter_edges() ) { data.push(edge.id); }
   return data;
 }
-function getIndexToIns(arr, num) {
-  // Sort arr from least to greatest.
-    let sortedArray = arr.sort((a, b) => a - b)
-  //                  [40, 60].sort((a, b) => a - b)
-  //                  [40, 60]
 
-  // Compare num to each number in sortedArray
-  // and find the index where num is less than or equal to 
-  // a number in sortedArray.
-    let index = sortedArray.findIndex((currentNum) => num <= currentNum)
-  //            [40, 60].findIndex(40 => 50 <= 40) --> falsy
-  //            [40, 60].findIndex(60 => 50 <= 60) --> truthy
-  //            returns 1 because num would fit like so [40, 50, 60]
-
-  // Return the correct index of num.
-  // If num belongs at the end of sortedArray or if arr is empty 
-  // return the length of arr.
-    return index === -1 ? arr.length : index
-}
-
-function repos_nodes() {
-  times = get_all('timestamp');
-  scores = get_all('score')
+function repos_nodes(overwrite_x=true, overwrite_y=false) {
+  var times = get_all('timestamp');
+  var times_inv = []; times.forEach(function(x){times_inv.push(-1*x);});
+  var scores = get_all('score');
+  var scoresX = []; scores.forEach(function(x){scoresX.push(Math.random());});
+  var canvas = document.getElementById('postnetviz');
+  var width = canvas.scrollWidth;
+  var height = canvas.scrollHeight;
+  var max_w = (width/2) - 100;
+  var max_h = (height/2) - 100;
   nodes.forEach(function(nd) {
-    nd.y = rankBetween(nd.timestamp, times, 400, -400);
-    // nd.x = rankBetween(nd.score, scores, 400, -400);
-  })
-}
+    // nd.fixed=FIXED;
+    new_x = smudge(rankBetween(-1*nd.timestamp, times_inv, -1*max_w, max_w), fac=0);
+    new_y = smudge(rankBetween(nd.score, scores, -1*max_h, max_h), fac=100);
+    if (overwrite_x | !nd.x) { nd.x=new_x; console.log('new x',nd.x) }
+    // if (overwrite_x | !nd.x) { x=new_x; } else { x = nd.x; }
+    if (overwrite_y | !nd.y) { nd.y=new_y; }
+    // if (overwrite_y | !nd.y) { y=new_y; } else { y = nd.y; }
+    // moveNodeAnim(nd.id, x, y, 1000)
+    // nd.x=x;
+    // nd.y=y;
+  });
 
 
-function repos_nodes_orig(
-    factor1=2,
-    factor2=200,
-    overwrite=true
-  ) {
-  scores = []; timestamps = []; nodes_d = [];
-  
-  min_x=-1 * factor1 * factor2
-  max_x=1 * factor1 * factor2
-  min_y=-1 * factor1 * factor2
-  max_y=1 * factor1 * factor2
-  for (nd of iter_nodes_d()) {
-    // console.log(nd.id, nd.score, nd.timestamp);
-    if ((nd.score !=undefined) & (nd.timestamp != undefined)) {
-      nodes_d.push(nd);
-      scores.push(nd.score);
-      timestamps.push(1*nd.timestamp);
-    }    
-  }
-
-  // minscore = Math.min(...scores);
-  // maxscore = Math.max(...scores);
-  // mintime = Math.min(...timestamps);
-  // maxtime = Math.max(...timestamps);
-
-  minscore = 0;
-  maxscore = scores.length;
-  mintime = 0;
-  maxtime = timestamps.length;
+    // y
 
 
-  // console.log('min score =',minscore)
-  // console.log('max score =',maxscore)
-  // console.log('min time =',mintime)
-  // console.log('max time =',maxtime)
-
-  ndl=[];
-  for (nd of nodes_d) {
-    // console.log('node',nd.id,'has x,y now of',nd.x,nd.y,'with score of',nd.score,nd.timestamp);
-    // console.log('overwrite',overwrite,!nd.x,!nd.y,nd.x,nd.y);
-    // if (overwrite | (nd.x==undefined) | (nd.y==undefined)) {
-    if (overwrite | (nd.y==undefined)) {
-      score = getIndexToIns(scores, nd.score);
-      timestamp = getIndexToIns(timestamps, 1*nd.timestamp);
-      new_score_xy = scaleBetween(score,min_x,max_x,minscore,maxscore);
-      new_time_xy = scaleBetween(timestamp,max_y,min_y,mintime,maxtime);
-
-      if(new_score_xy & new_time_xy) {
-        nd['x'] = new_score_xy;
-        nd['y'] = new_time_xy;
-        nd['fixed'] = {x: false, y: true};
-        // console.log([nd.score, nd.timestamp], [nd.x, nd.y]);
-        // console.log('node',nd.id,'has NEW x,y of',nd.x,nd.y,'with sorted',score,timestamp);
-        ndl.push(nd);
-      }
-    }
-  }
-  nodes.update(ndl);
-
-  // fix_nodes();
-}
-
-
-
-
+    // if (overwrite_x | (nd.x==undefined)) {
+    //   // nd.x = rankBetween(nd.timestamp, times, width/2,-1*width/2);
+    //   new_x = rankBetween(-1*nd.timestamp, times_inv, width/2,-1*width/2);
+    // } else {
+    //   new_x = 
+    // }
+    // if (overwrite_y | (nd.y==undefined)) {
+    //   // nd.y = rankBetween(nd.score, scores, height/2, -1*height/2);
+      
+    // }
+    
+};
 
 
 // start
@@ -779,3 +778,4 @@ $(document).ready(function(){
 
   
 });
+

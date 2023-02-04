@@ -9,11 +9,11 @@ class PostNet:
             else posts
         )
     
-    def graph(self):
+    def graph(self, local_server=''):
         g=nx.DiGraph()
         
         def ensure_node(node):
-            ndata = node.node_data
+            ndata = node.get_node_data(local_server=local_server)
             nid = ndata.get('id')
             if not g.has_node(nid):
                 g.add_node(nid, **ndata)

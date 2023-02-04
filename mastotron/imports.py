@@ -10,16 +10,17 @@ NODE_READ_STATUS_IS_UNREAD='unread'
 REL_GRAPHTIME='when'
 
 
-GRAPHTIME_ROUNDBY=10
+BLUR_MINUTES=5   # 5 minutes grace period / blur
 
 LIMNODES=30
-SCORE_TYPE = 'All'
-LIM_TIMELINE=10
-LIM_CONVO=5
+SCORE_TYPE = 'ExtendedSimple'
+LIM_TIMELINE=15
+LIM_CONVO=3
 
 
 import os,sys; sys.path.insert(0,'..')
 from pprint import pprint, pformat
+import textwrap
 import numpy as np
 from functools import cached_property, lru_cache, total_ordering
 cache = lru_cache(maxsize=None)
@@ -27,6 +28,7 @@ from typing import Optional,Union,Dict,List
 from sqlmodel import Field, Session, SQLModel, create_engine, select, Relationship
 import numpy as np
 from mastodon.errors import MastodonNotFoundError, MastodonNetworkError
+from mastodon.utility import AttribAccessDict
 from mastodon import Mastodon, AttribAccessDict
 from datetime import datetime, timedelta, timezone
 import datetime as dt
