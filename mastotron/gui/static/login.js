@@ -1,13 +1,14 @@
 function prompt_for_username(username_now='') {  
     pb.prompt(
       function(val) { pb.clear(); login_user_name(val); },
-      'Which mastodon account would you like to connect? (username@server.com)', // Message text
+      'Which mastodon account would you like to connect to mastotron? (username@server.com)', // Message text
       'text',                         // Input type
       username_now,                             // Default value
       'Login',                        // Submit text
       'Cancel',                       // Cancel text
       {}                              // Additional options
     );
+    reinforce_darkmode();
   }
   
   function login_user_name(value) {
@@ -25,6 +26,7 @@ function prompt_for_username(username_now='') {
       'Cancel',                       // Cancel text
       {}                              // Additional options
     );
+    reinforce_darkmode();
   }
   
   function login_with_code(acct,code) {
@@ -68,11 +70,3 @@ socket.on('server_not_giving_code', function(d) {
 
 
 
-function gethelpmsg() {
-  pb.alert(
-    function() {},
-    'Help message', // Message text
-    'Thanks',                       // Ok text
-    {}                          // Additional options
-  );
-}

@@ -7,9 +7,10 @@ Flask-Session
 flask_socketio
 IPython
 pyinstaller
-nltk
 cogdb
 sqlitedict
 eventlet
 human_readable
-simple-websocket
+gevent
+gevent-websocket
+pyperclip

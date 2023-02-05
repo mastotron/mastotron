@@ -1,6 +1,4 @@
-# make sure to use eventlet and call eventlet.monkey_patch()
-import eventlet
-eventlet.monkey_patch()
+__version__ = '0.4.2'
 
 PORT=1789
 HOST='localhost'
@@ -16,20 +14,23 @@ NODE_READ_STATUS_IS_UNREAD='unread'
 REL_GRAPHTIME='when'
 
 
-BLUR_MINUTES=5   # 5 minutes grace period / blur
+BLUR_MINUTES=5   # 1 minutes grace period / blur
 
-LIMNODES=30
-SCORE_TYPE = 'ExtendedSimple'
+LIMNODES=20
+SCORE_TYPE = 'All'
 LIM_TIMELINE=20
 LIM_CONVO=3
 
 
 import os,sys; sys.path.insert(0,'..')
-
-path_self = os.path.realpath(__file__)
-path_gui = os.path.abspath(os.path.join(path_self,'..','..','gui'))
-path_code = os.path.abspath(os.path.join(path_self,'..','..'))
-path_web = os.path.abspath(os.path.join(path_self,'..','..','gui','src-flask-server'))
+FORK_AVAILABLE=False
+os.environ['FORK_AVAILABLE']=str(FORK_AVAILABLE)
+path_imports = path_self = os.path.realpath(__file__)
+path_gui = os.path.abspath(os.path.join(path_imports,'..','gui'))
+path_code = os.path.abspath(os.path.join(path_imports,'..','..'))
+path_web = path_gui
+path_static = os.path.join(path_web,'static')
+path_templates = os.path.join(path_web,'templates')
 
 from pprint import pprint, pformat
 import textwrap
@@ -51,7 +52,7 @@ import pandas as pd
 from IPython.display import Markdown, display
 def printm(x): display(Markdown(x))
 import webbrowser,json, re
-from collections import UserDict,UserList
+from collections import UserDict,UserList,defaultdict
 def unhtml(x): 
     x = x.replace('<br>','\n')
     return re.sub(r'<.*?>', '', x).strip()
@@ -67,8 +68,8 @@ import logging as log
 logging.getLogger().setLevel(logging.INFO)  # choose your level here
 from tqdm import tqdm
 import mastodon
-
-
+import pyperclip
+from multiprocessing.pool import ThreadPool
 
 
 

@@ -318,7 +318,6 @@ class PostModel(DictModel):
         o={}
         if self.is_reply and self.in_reply_to_id:
             o=self.status_context_d().get(self.in_reply_to_id)
-            print('??????',o)
             if not o:
                 pre,post=self.status_context
                 if pre:
@@ -511,7 +510,7 @@ class PostModel(DictModel):
     @property
     def label(self): return self.get_label()
 
-    def get_label(self, limsize=30, max_lines=4, **kwargs):
+    def get_label(self, limsize=20, max_lines=3, **kwargs):
         text = self.text
         for url in find_urls(text): text=text.replace(url,url[:20])
         

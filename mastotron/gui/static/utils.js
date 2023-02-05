@@ -80,6 +80,7 @@ function get_time_str() {
 
 
 function moveNodeAnim(nodeId, finX, finY, duration) {
+    if (!(nodeId in network.body.nodes)) { return; }
     let startPos = network.getPositions([nodeId])[nodeId];
     let startX = startPos.x;
     let startY = startPos.y;
@@ -87,6 +88,7 @@ function moveNodeAnim(nodeId, finX, finY, duration) {
     let _duration = duration || 1000;
 
     let move = (function () {
+        if (!(nodeId in network.body.nodes)) { return; }
         let time = performance.now();
         let deltaTime = (time - startTime) / _duration;
         let currentX = startX + ((finX - startX) * deltaTime);
@@ -99,6 +101,8 @@ function moveNodeAnim(nodeId, finX, finY, duration) {
             network.moveNode(nodeId, currentX, currentY);
             window.requestAnimationFrame(move);
         }
+
+        nodes.update({'id':nodeId, 'x':currentX, 'y':currentY});
     });
 
     // if((startX!=finX) | (startY !=finY)) {
@@ -107,9 +111,12 @@ function moveNodeAnim(nodeId, finX, finY, duration) {
 
 }
 function smudge(x, fac=100) {
-    y = Math.random() * fac;
-    if (Math.random() > 5) { y=-1*x; }
-    return x + y;
+    if (fac) {
+        y = Math.random() * fac;
+        if (Math.random() > .5) { y=-1*y; }
+        return x + y;
+    }
+    return x;
 }
 
 
@@ -140,4 +147,42 @@ async function getRequest(url = '') {
         cache: 'no-cache'
     })
     return response.json()
+}
+
+
+
+function rescale_network() {
+    console.log('rescaling')
+    let yMin = Number.MAX_SAFE_INTEGER
+    let yMax = Number.MIN_SAFE_INTEGER
+    nodes.forEach(node => {
+    // Using bounding box takes node height into account
+    const boundingBox = network.getBoundingBox(node.id)
+    if(boundingBox.top < yMin)
+        yMin = boundingBox.top
+
+    if(boundingBox.bottom > yMax)
+        yMax = boundingBox.bottom
+    })
+
+    // Accounts for some node label clipping
+    const heightOffset = 50
+
+    // "Natural" aka 1.0 zoom height of the network
+    const naturalHeight = yMax - yMin + heightOffset
+
+    // container is a <div /> around the network with fixed px height;
+    // the child network <canvas /> is height 100%
+    container.style.height = naturalHeight + 'px'
+
+    // Lets the network adjust to its new height inherited from container,
+    // then fit() to zoom out as needed; note `autoResize` must be DISABLED for the network
+    network.redraw()
+    network.fit()
+
+    // Sometimes the network grows too wide and fit() zooms out accordingly;
+    // in this case, scale the height down and redraw/refit
+    container.style.height = network.getScale() * naturalHeight + 'px'
+    network.redraw()
+    network.fit()
 }

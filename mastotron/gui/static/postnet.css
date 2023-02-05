@@ -1,8 +1,8 @@
 body {
 font: 11pt arial;
 color: black;
-width:120vw;
-height:200vh;
+width:100vw;
+height:120vh;
 /* background-color: white;  */
 background-color: #eeeeee;
 /* background-color: black;  */
@@ -14,6 +14,7 @@ body::-webkit-scrollbar {
   }
 /* div { margin: 0; padding: 0; } */
 #helper {
+    font-size:1em;
     bottom:5px;
     right:5px;
     color:gray;
@@ -45,6 +46,10 @@ body::-webkit-scrollbar {
 }
 
 a { color: lightblue; }
+#optbuttons a { color:gray; text-decoration: none; }
+#optbuttons li { margin-bottom:.5em; text-align: right; list-style: none;}
+
+
 #acctname { font-size: 11pt; }
 #header {
     position:fixed;
@@ -58,7 +63,7 @@ a { color: lightblue; }
     color: gray;
 }
 #logmsg {
-font: 1em;
+font: .8em;
 top:5px;
 right:5px;
 text-align:right;
@@ -67,24 +72,24 @@ color:gray;
 }
 #optbuttons {
     position: fixed;
-    top: 2em;
-    right:5px;
+    top: 25px;
+    right:7px;
+    font-size:2em;
 }
 
 #postnetviz {
-height: 95vh; /* For 100% screen height */
-width:  95vw; /* For 100% screen width */
-/* border: 1px dotted slategrey; */
-border:0px;
+height: 95vh;
+width:  95vw;
+border: 1px dashed rgba(100,100,100,0);
 margin:0;
 padding:0;
 outline:0;
-border:none;
+z-index: 0;
 /* background-color: #eeeeee; */
 }
-#postnetviz:focus {outline:0;border:none;}
-#postnetviz:active {outline:0;border:none;}
-#postnetviz:hover {outline:0;border:none;}
+#postnetviz:focus {outline:0;border:1px dashed rgba(100,100,100,0);}
+#postnetviz:active {outline:0;border:1px dashed rgba(100,100,100,0);}
+#postnetviz:hover {outline:0;border:1px dashed rgba(100,100,100,0);}
 .vis-network:focus {outline:0;border:none;}
 .vis-network:active {outline:0;border:none;}
 .vis-network:hover {outline:0;border:none;}
@@ -191,11 +196,14 @@ font-size:13pt;
 }
 
 #xaxis { 
-    left:1.25em;
+    left:1.5em;
 }
 
 #yaxis { 
-    left: -4em;
+    left: -3.5em;
     bottom: 5em;
     transform: rotate(-90deg);
 }
+
+
+#pb-container { border-bottom: 0px; }

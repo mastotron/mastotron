@@ -1,6 +1,12 @@
 from .imports import *
 
 
+def rmfile(fn):
+    try:
+        os.remove(fn)
+    except OSError:
+        pass
+
 def getlocurl(url,server):
     return f'https://{server}/authorize_interaction?uri={url}'
 
@@ -103,46 +109,6 @@ def test_encodeURIComponent():
 
 
 
-def tokenize(text):
-    """
-    Split a text into tokens (words, morphemes we can separate such as
-    "n't", and punctuation).
-    """
-    return list(_tokenize_gen(text))
-
-
-def _tokenize_gen(text):
-    import nltk
-    
-    # make sure we have the tokenizer package
-    try:
-        nltk.data.find('tokenizers/punkt')
-    except LookupError:
-        nltk.download('punkt')
-
-
-    for sent in nltk.sent_tokenize(text):
-        for word in nltk.word_tokenize(sent):
-            yield word
-
-
-def untokenize(words):
-    """
-    Untokenizing a text undoes the tokenizing operation, restoring
-    punctuation and spaces to the places that people expect them to be.
-    Ideally, `untokenize(tokenize(text))` should be identical to `text`,
-    except for line breaks.
-    """
-    text = ' '.join(words)
-    step1 = text.replace("`` ", '"').replace(" ''", '"').replace('. . .', '...')
-    step2 = step1.replace(" ( ", " (").replace(" ) ", ") ")
-    step3 = re.sub(r' ([.,:;?!%]+)([ \'"`])', r"\1\2", step2)
-    step4 = re.sub(r' ([.,:;?!%]+)$', r"\1", step3)
-    step5 = step4.replace(" '", "'").replace(" n't", "n't").replace(
-        "can not", "cannot")
-    step6 = step5.replace(" ` ", " '")
-    return step6.strip()
-
 
 def find_local_url(*urls):
     urls = [x for x in urls if type(x)==str and x]
@@ -187,14 +153,16 @@ def iter_graphtimes(timestamp=None, minute_blur=BLUR_MINUTES, max_days=7):
             break
 
 
-def iter_datetimes(timestamp=None, minute_blur=BLUR_MINUTES, max_days=7):
+def iter_datetimes(timestamp=None, minute_blur=BLUR_MINUTES, max_mins=7):
     now = get_now(timestamp)
     current_time = blurtime(now)
     while True:
         yield current_time
         current_time -= dt.timedelta(minutes=minute_blur)
-        if abs(now - current_time) > dt.timedelta(days=max_days):
+        if abs(now - current_time) > dt.timedelta(minutes=max_mins):
             break
+
+def get_datetimes(**kwargs): return list(iter_datetimes(**kwargs))
 
 def blurtime(dtobj, minute_blur=BLUR_MINUTES):
     return dt.datetime(
@@ -215,3 +183,24 @@ def find_urls(string):
     url = re.findall(regex, string)
     return [x[0] for x in url]
 
+
+
+# def query_user_min_max(acct, ):
+#     Tron().api_user(acct)
+
+def dtimekey(dtobj=None,timestamp=None,minute_blur=BLUR_MINUTES):
+    if dtobj or timestamp:
+        if not dtobj: dtobj=dt.datetime.fromtimestamp(timestamp)
+
+        dtime1 = blurtime(dtobj, minute_blur)
+        dtime2 = dtime1 + dt.timedelta(minutes=minute_blur)        
+    else:
+        dtime2 = blurtime(dt.datetime.now(), minute_blur)
+        dtime1 = dtime2 - dt.timedelta(minutes=minute_blur)
+
+    dkey = get_graphtime_str(timestamp = dtime1.timestamp(), minute_blur=minute_blur)
+    min_id = ( int( dtime1.timestamp() ) << 16 ) * 1000
+    max_id = ( int( dtime2.timestamp() ) << 16 ) * 1000
+    return (dkey,min_id,max_id)
+
+        

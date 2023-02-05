@@ -1,14 +1,15 @@
 # make sure to use eventlet and call eventlet.monkey_patch()
-import eventlet
-eventlet.monkey_patch()
+# import eventlet
+# eventlet.monkey_patch()
 
-import os,sys
+import os,sys,socket,time,webbrowser
 path_app = os.path.realpath(__file__)
 path_code = os.path.abspath(os.path.join(path_app,'..','..'))
 path_codedir = os.path.abspath(os.path.join(path_code,'..'))
 sys.path.insert(0,path_codedir)
 
 from mastotron import *
+from mastotron.imports import __version__ as vnum
 
 from threading import Lock,Thread
 from flask import Flask, render_template, request, redirect, url_for, session, current_app
@@ -16,6 +17,12 @@ from flask_session import Session
 from flask_socketio import SocketIO, send, emit
 from mastodon import StreamListener
 import os,time,sys,random
+from engineio.async_drivers import eventlet
+# from engineio.async_drivers import threading
+
+import logging
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
 
 namespace = 'mastotron.web'
 seen_posts = set()
@@ -23,17 +30,44 @@ STARTED=None
 new_urls = set()
 
 
-def logmsg(x): emit('logmsg',str(x))
+def logmsg(x): 
+    emit('logmsg',str(x))
 def logsuccess(x): emit('logsuccess',str(x))
 def logerror(x): emit('logerror',str(x))
 
 #####
-app = Flask(__name__)
+HOSTPORTURL=f'http://{HOST}:{PORT}'
+
+LINE1=f'MASTOTRON {vnum}'
+LINE2=f'URL: {HOSTPORTURL}'
+LINE3='(Visit this URL in your browser. It is now copied to your clipboard.)'
+LOGO=r'''
+                           _               _                             
+  _ __    __ _     ___    | |_     ___    | |_      _ _    ___    _ _    
+ | '  \  / _` |   (_-<    |  _|   / _ \   |  _|    | '_|  / _ \  | ' \   
+ |_|_|_| \__,_|   /__/_   _\__|   \___/   _\__|   _|_|_   \___/  |_||_|  
+_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""| 
+"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-' 
+'''
+lwid=max(len(lstr) for lstr in LOGO.split('\n'))
+WELCOME_MSG = f'''
+{LOGO.center(lwid)}
+
+{LINE1.center(lwid)}
+
+{LINE2.center(lwid)}
+
+{LINE3.center(lwid)}
+'''
+
+
+app = Flask(__name__, static_folder=path_static, template_folder=path_templates)
 app.config['SESSION_PERMANENT'] = True
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SESSION_FILE_DIR'] = os.path.join(path_data, 'flask_session')
 Session(app)
-socketio = SocketIO(app, manage_session=False, async_mode="threading")
+socketio = SocketIO(app, manage_session=False, async_mode="eventlet")
+# socketio = SocketIO(app, manage_session=False, async_mode="threading")
 
 
 @app.route("/")
@@ -42,16 +76,35 @@ socketio = SocketIO(app, manage_session=False, async_mode="threading")
 def postnet(): 
     acct=session.get('acct')
     if not acct or not Tron().user_is_init(acct): 
-        return render_template('login.html')
-    
-    return render_template('postnet.html', acct=acct, minnodes=LIM_TIMELINE)
+        return render_template('login.html', acct=acct, config_d=get_config())
+    else:
+        return render_template('postnet.html', acct=acct, config_d=get_config())
 
 @app.route('/hello//flaskwebgui-keep-server-alive')
 @app.route('/hello/flaskwebgui-keep-server-alive')
 @app.route('/flaskwebgui-keep-server-alive')
 def keepalive():
     return {'status':200}
-    
+
+
+def get_config(d={}):
+    defaultd={
+        'LIM_NODES_GRAPH':5,
+        'LIM_NODES_STACK':100,
+        'DARKMODE':1
+    }
+    sessiond={k:v for k,v in session.items() if k and k[0]!='_'}
+    outd = {**defaultd, **sessiond, **d}
+    return outd
+
+@socketio.event
+def req_config(d={}):
+    emit('res_config',get_config(d))
+
+@socketio.event
+def set_config(d):
+    for k,v in d.items(): session[k]=v
+
 @socketio.event
 def set_acct_name(data):
     tron = Tron()
@@ -103,12 +156,12 @@ class NodeListener(StreamListener):
 
 @socketio.event
 def start_updates(data={}):
-    # return
+    return
     global seen_posts, STARTED
     seen_posts = set()
     if not STARTED:
-        print('start_updates')
         acct = get_acct_name(data)
+        print(f'\n>> listening for push updates on {acct}...')
         Tron().api_user(acct).stream_user(
             NodeListener(), 
             run_async=True
@@ -120,52 +173,38 @@ def get_pushes(data={}):
     global new_urls
     new_posts = PostList(new_urls)
     new_urls = set()
-    update_posts(
-        new_posts, 
-        omsg='push updated'
-    )
-
-
-@socketio.event
-def get_updates_orig(data={}):
-    acct = get_acct_name()
-    if not acct: return
-    unread_only = data.get('unread_only',True)
-    lim = data.get('lim',LIM_TIMELINE)
-    tl = Tron().timeline_unread(acct, lim=LIM_TIMELINE, incl_now=False, unread_only=unread_only)
-    update_posts(tl)
-
-
+    if new_posts:
+        update_posts(
+            new_posts, 
+            omsg='push updated',
+            force_push=True
+        )
 
 @socketio.event
 def get_updates(data={}):
+    print(f'< get_updates {data}')
     acct = get_acct_name()
     if not acct: return
     unread_only = data.get('unread_only',True)
-    lim = data.get('lim',LIM_TIMELINE)
-    i=0
-    batchsize=1
-    l=[]
-    for post in Tron().timeline_iter(acct):
-        if not unread_only or not post.is_read:
-            i+=1
-            l.extend(post.convo)
-            if len(l)>=batchsize:
-                update_posts(PostList(l))
-                l=[]
-                # time.sleep(.5)
-            if i>=lim: 
-                if l: update_posts(PostList(l))
-                break
+    ids_now=set(data.get('ids_now',[]))
+    lim = data.get('lim')
+    if not lim: lim=get_config().get('LIM_NODES_STACK')
+    force_push = data.get('force_push',False)
+    print(f'>> getting {lim} updates for {acct} ({len(ids_now)} ids seen prior)')
+    iterr=Tron().timeline_iter(
+        acct, 
+        unread_only=True,
+        seen=ids_now,
+        lim=lim
+    )
+    for post in iterr: 
+        update_posts([post], ids_done=ids_now, force_push=force_push)
 
 
-
-    # update_posts(tl,omsg='timeline updated',ids_done=set(data.get('ids_now',[])))
-        
-
-
-def update_posts(tl, omsg='refreshed', emit_key='get_updates',ids_done=None,unread_only=True):
+def update_posts(tl, omsg='refreshed', emit_key='get_updates',ids_done=None,unread_only=True, force_push=False):
+    if type(tl)!=PostList: tl=PostList(tl)
     if len(tl):
+        # print('>',tl)
         tnet = tl.network()
         nx_g = tnet.graph(local_server=get_srvr_name())
         nx_g.remove_nodes_from(
@@ -176,16 +215,18 @@ def update_posts(tl, omsg='refreshed', emit_key='get_updates',ids_done=None,unre
         )
         nodes = [d for n,d in nx_g.nodes(data=True)]
         edges = [d for a,b,d in nx_g.edges(data=True)]
-        # print('nodes',len(nodes),'edges',len(edges))
 
-        omsg = f'{len(nodes)} new updates @ {get_time_str()}'
+        # print('ne',[d['id'] for d in nodes],[d['id'] for d in edges])
+
+        omsg = f'{len(nodes)+len(edges)} new updates @ {get_time_str()}'
         if nodes or edges:
-            odata = dict(nodes=nodes, edges=edges, logmsg=omsg)
+            odata = dict(nodes=nodes, edges=edges, logmsg=omsg, force_push=force_push)
+            for n in nodes: print('++',n['id'])
             emit(emit_key, odata)
             return True
     
-    omsg = f'no new updates @ {get_time_str()}'
-    logmsg(omsg)
+    # omsg = f'no new updates @ {get_time_str()}'
+    # logmsg(omsg)
     return False
 
 @socketio.event
@@ -194,7 +235,7 @@ def add_context(node_id):
     post = Post(node_id)
     if post:# unread_convo = PostList(p for p in post.convo if not p.is_read)
         convo = post.convo
-        update_posts(convo[:LIM_TIMELINE])
+        update_posts(convo[:LIM_TIMELINE], force_push=True)
 
 
 
@@ -210,6 +251,11 @@ def set_darkmode(darkmode):
     session[key] = int(darkmode)
 
 @socketio.event
+def set_in_session(dict):
+    for k,v in dict.items():
+        session[k]=v
+
+@socketio.event
 def mark_as_read(node_ids):
     print('mark_as_read', node_ids)
     for node_id in node_ids:
@@ -223,25 +269,45 @@ def mark_as_read(node_ids):
 
 
 
+
+
+
+class OpenBrowser(Thread):
+    def __init__(self):
+        super(OpenBrowser, self).__init__()
+    def notResponding(self):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        return sock.connect_ex((HOST, PORT))
+    def run(self):
+        while self.notResponding():
+            # print('Did not respond')
+            time.sleep(0.5)
+        # print('Responded')
+        webbrowser.open_new(f'http://{HOST}:{PORT}/') 
+
+
 def send_update(nodes=[], edges=[]):
     odata=dict(nodes=nodes, edges=edges)
     emit('get_updates', odata)
     return odata
 
 
+def view(**kwargs):
+    OpenBrowser().start()
 
+def mainview(**kwargs):
+    view(**kwargs)
+    main(**kwargs)
 
-def open_view(wait=2):
-    time.sleep(wait)
-    webbrowser.open(f'http://{HOST}:{PORT}')
+def main(debug=False, **kwargs): 
+    pyperclip.copy(HOSTPORTURL)
+    print(WELCOME_MSG)
+    return socketio.run(
+        app, 
+        debug=debug, 
+        # allow_unsafe_werkzeug=True,
+        port=PORT,
+        host=HOST
+    )
 
-def view(wait=2):
-    Thread(target=open_view, kwargs=dict(wait=wait)).start()
-
-def mainview(wait=2):
-    view(wait=wait)
-    main()
-
-def main(): return socketio.run(app, debug=True, allow_unsafe_werkzeug=True,port=PORT,host=HOST)
-
-if __name__=='__main__': main()
+if __name__=='__main__': mainview(debug=False)

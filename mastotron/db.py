@@ -6,22 +6,35 @@ class TronDB:
         global gdb
         if gdb is None:
             from cog.torque import Graph
-            gdb = Graph(
-                'cogdb', 
-                cog_home=os.path.basename(path_cogdb), 
-                cog_path_prefix=os.path.dirname(path_cogdb)
-            )
+            try:
+                gdb = Graph(
+                    'cogdb', 
+                    cog_home=os.path.basename(path_cogdb), 
+                    cog_path_prefix=os.path.dirname(path_cogdb),
+                    enable_caching=False
+                )
+            except Exception as e:
+                print(f'!! {e} !!')
+                rmfile(path_cogdb)
+                gdb = Graph(
+                    'cogdb', 
+                    cog_home=os.path.basename(path_cogdb), 
+                    cog_path_prefix=os.path.dirname(path_cogdb)
+                )
+
         return gdb
     
     def relate(self, obj1, obj2, rel):
         id1=str(obj1)
         id2=str(obj2)
+        rel=str(rel)
         if id1 and id2 and rel:
             self.gdb.put(id1,rel,id2)
     
     def unrelate(self, obj1, obj2, rel):
         id1=str(obj1)
         id2=str(obj2)
+        rel=str(rel)
         if id1 and id2 and rel:
             self.gdb.drop(id1,rel,id2)
 

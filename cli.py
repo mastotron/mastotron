@@ -1,3 +1,6 @@
+# make sure to use eventlet and call eventlet.monkey_patch()
+from mpire.pool import WorkerPool
+
 from mastotron.imports import *
 import click
 

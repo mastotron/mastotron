@@ -5,8 +5,9 @@
 
     <link rel="stylesheet" href="/static/jquery.flash.css">
     <link rel="stylesheet" href="/static/jquery-ui.css">
-    <link rel="stylesheet" href="/static/postnet.css">
     <link rel="stylesheet" href="/static/prompt-boxes.min.css">
+    <link rel="stylesheet" href="/static/postnet.css">
+    
 
     <script type="text/javascript" src="/static/vis-network.min.js"></script>
     <script type="text/javascript" src="/static/jquery-latest.min.js"></script>
@@ -16,11 +17,11 @@
     <script type="text/javascript" src="/static/utils.js"></script>
     <script type="text/javascript" src="/static/prompt-boxes.min.js"></script>
     <script type="text/javascript" src="/static/login.js"></script>
-
     <script type="text/javascript">
-        var DARKMODE = {{ session.get('DARKMODE',0) }};
-        var pb = new PromptBoxes({toasts: {duration: 2500, allowClose: true}});
+        var CONFIG = {{config_d|tojson}};
     </script>
+    <script type="text/javascript" src="/static/knobs.js"></script>
+
 
     {% block head %}
     {% endblock %}
@@ -44,9 +45,15 @@
     <div id="logmsg"></div>
 
     <div id="optbuttons">
-      <a onclick="toggle_darkmode()">
+      <li><a href="#" onclick="gethelpmsg()">ℹ</a></li>
+
+      <li><a onclick="toggle_darkmode()" href="#">
         <img id="nightmode" src="/static/dark-mode-6682.png" width="15" height="15" style="opacity:0.5"; />
-      </a>
+      </a></li>
+            
+      <li><a href="#" onclick="prompt_for_num_nodes()">#</a></li>
+
+      
     </div>
 
     {% block content %}
@@ -57,14 +64,11 @@
     {% endblock %}
 
     <div id="helper">
-    To see more, mark existing posts as read by hovering over them and pressing 🇷.<br/>
-    Double-clicking a node will bring you to it in a browser.<br/>
-    Right-clicking it will bring its replies into the network.<br/>
-    Double-clicking an empty spot or pressing 🇳 will force updates.
+    To see more posts, mark these "read" by hovering over them and pressing 🇷 (R). <a href="#" onclick="gethelpmsg()">Help</a>
     </div>
 
-    <div id="xaxis" class="axis">X-axis: Recency ⟶</div>
-    <div id="yaxis" class="axis">Y-axis: Popularity ⟶</div>
+    <div id="xaxis" class="axis">X-axis: Engagement ⟶</div>
+    <div id="yaxis" class="axis">Y-axis: Recency ⟶</div>
 
   </body>
 </html>

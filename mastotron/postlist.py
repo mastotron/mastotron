@@ -3,19 +3,23 @@ from .imports import *
 class PostList(UserList):
     def __init__(self, data_iter=[], lim=None):
         from .post import Post
-        def iterr():
-            seen=set()
-            for post in data_iter:
-                post = Post(post)
-                if post:
-                    post = post.source
-                    if post not in seen:
-                        yield post
-                        seen.add(post)
-
+        # def iterr():
+        #     seen=set()
+        #     for post in data_iter:
+        #         post = Post(post)
+        #         if post:
+        #             post = post.source
+        #             if post not in seen:
+        #                 yield post
+        #                 seen.add(post)
+        def iterr(): 
+            yield from (Post(x) for x in data_iter)
         l=list(islice(iterr(), lim))
         super().__init__(l)
         self.sort_chron()
+
+    def __str__(self):
+        return str([p._id for p in self])
 
     def __hash__(self):
         return hash('____'.join(p._id for p in self))
