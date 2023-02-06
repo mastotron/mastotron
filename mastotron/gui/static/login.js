@@ -12,8 +12,10 @@ function prompt_for_username(username_now='') {
   }
   
   function login_user_name(value) {
-    console.log('setting account name');
-    socket.emit('set_acct_name', {acct:value});
+    if(value){
+      console.log('setting account name');
+      socket.emit('set_acct_name', {acct:value});
+    }
   }
   
   function prompt_for_code(acct,url) {

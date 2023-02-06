@@ -6,21 +6,21 @@ class TronDB:
         global gdb
         if gdb is None:
             from cog.torque import Graph
-            try:
-                gdb = Graph(
-                    'cogdb', 
-                    cog_home=os.path.basename(path_cogdb), 
-                    cog_path_prefix=os.path.dirname(path_cogdb),
-                    enable_caching=False
-                )
-            except Exception as e:
-                print(f'!! {e} !!')
-                rmfile(path_cogdb)
-                gdb = Graph(
-                    'cogdb', 
-                    cog_home=os.path.basename(path_cogdb), 
-                    cog_path_prefix=os.path.dirname(path_cogdb)
-                )
+            # try:
+            gdb = Graph(
+                'cogdb', 
+                cog_home=os.path.basename(path_cogdb), 
+                cog_path_prefix=os.path.dirname(path_cogdb),
+                enable_caching=False
+            )
+            # except Exception as e:
+                # # print(f'!! {e} !!')
+                # rmfile(path_cogdb)
+                # gdb = Graph(
+                #     'cogdb', 
+                #     cog_home=os.path.basename(path_cogdb), 
+                #     cog_path_prefix=os.path.dirname(path_cogdb)
+                # )
 
         return gdb
     

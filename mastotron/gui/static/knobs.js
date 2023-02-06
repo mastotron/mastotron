@@ -24,7 +24,7 @@ function gethelpmsg() {
     function() {},
     msg,
     'OK',                       // Ok text
-    {}                          // Additional options
+    {closeWithEscape: true},
   );
   $('#pb-container').css('max-width','700px');
   reinforce_darkmode();
@@ -53,7 +53,11 @@ function get_in_config(k,dflt=undefined) {
 }
 
 function get_dark_mode() { return get_in_config('DARKMODE',0); }
+var DARKMODE = get_dark_mode();
+
 function set_dark_mode(mode) { return set_in_config('DARKMODE',mode); }
+
+
 
 function get_lim_nodes_graph(dflt=15) { 
   res=get_in_config('LIM_NODES_GRAPH',dflt); 
@@ -75,5 +79,26 @@ function set_lim_nodes_graph(lim) {
   }
 }
 
-function get_lim_nodes_stack() { return get_in_config('LIM_NODES_STACK',60); }
+function get_lim_nodes_stack() { 
+  return get_lim_nodes_graph() * 2;
+  // return get_in_config('LIM_NODES_STACK',60); 
+}
 function set_lim_nodes_stack(lim) { return set_in_config('LIM_NODES_STACK',lim); }
+
+
+
+
+
+
+function toggle_darkmode() {
+  if (DARKMODE==1) { set_light_mode(); } else { set_dark_mode(); }
+}
+function reinforce_darkmode() {
+  if (DARKMODE==1) { set_dark_mode(); } else { set_light_mode(); }
+}
+
+$(document).ready(function(){  
+    reinforce_darkmode();
+});
+
+

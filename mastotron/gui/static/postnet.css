@@ -4,7 +4,12 @@ color: black;
 width:100vw;
 height:120vh;
 /* background-color: white;  */
-background-color: #eeeeee;
+background-color: #060718;
+/* background-image: url('/static/dalle2.png'); */
+background-repeat: no-repeat;
+background-position: left bottom;
+background-size: 200px;
+background-attachment: fixed;
 /* background-color: black;  */
 /* background-color: #041e2e; */
 /* background-color: #010b12; */
@@ -13,15 +18,27 @@ body::-webkit-scrollbar {
     display: none;
   }
 /* div { margin: 0; padding: 0; } */
+
+#oulo { 
+    position: fixed; 
+    top:0; 
+    left:0;
+    opacity: 0.75;
+    width:77px;
+    z-index:0;
+}
+
+
 #helper {
     font-size:1em;
-    bottom:5px;
+    top:5px;
     right:5px;
     color:gray;
     /* width:50em; */
     position: fixed;
-    text-align: right;
-
+    text-align: left;
+    opacity:0.75;
+    /* display: none; */
 }
 
 #logindiv {
@@ -53,28 +70,28 @@ a { color: lightblue; }
 #acctname { font-size: 11pt; }
 #header {
     position:fixed;
-    top:5px;
-    left:5px;
+    top:1em;
+    right:0;
     vertical-align: middle;
     font-size: 12pt;
-    z-index:1;
+    /* z-index:1; */
 
     /* letter-spacing: .5em; */
     color: gray;
 }
 #logmsg {
-font: .8em;
-top:5px;
-right:5px;
-text-align:right;
-position:fixed;
-color:gray;
+    font: .8em;
+    bottom:5px;
+    right:5px;
+    text-align:right;
+    position:fixed;
+    color:gray;
 }
 #optbuttons {
     position: fixed;
-    top: 25px;
-    right:7px;
-    font-size:2em;
+    top: 75px;
+    left:18px;
+    font-size:3em;
 }
 
 #postnetviz {
@@ -82,6 +99,7 @@ height: 95vh;
 width:  95vw;
 border: 1px dashed rgba(100,100,100,0);
 margin:0;
+margin-left:50px;
 padding:0;
 outline:0;
 z-index: 0;

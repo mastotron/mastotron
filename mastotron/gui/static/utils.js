@@ -107,6 +107,7 @@ function moveNodeAnim(nodeId, finX, finY, duration) {
 
     // if((startX!=finX) | (startY !=finY)) {
     move();
+    // nodes.update({'id':nodeId, 'x':finX, 'y':finY});
     // }
 
 }
@@ -186,3 +187,5 @@ function rescale_network() {
     network.redraw()
     network.fit()
 }
+
+

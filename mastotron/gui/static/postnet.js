@@ -1,18 +1,24 @@
 // vars
+var TIME_TIL_UPDATE = 3000;
+var TIME_TIL_MOVED = 1000;
+var BUSY=false;
 var FIXED = {x:false,y:false}
 var MODE = 'default';
 var SCORE_TYPE = 'All';
-var darkbgcolor = 'rgb(20,20,23)'; //#28282B';
-var lightbgcolor = '#eeeeee';
+var darkbgcolor = '#060718'; //'rgb(20,20,23)'; //#28282B';
+var lightbgcolor = '#F5F5ED';
 var lighttweetbg = 'white';
 var darktweetbg = 'rgba(30,30,33, 0.9)'; //#28282B';
+var darkaccent = '#B928DD';
+var lightaccent = '#1C263D';
 var darktxtcolor = 'white';
 var lighttxtcolor = 'black';
 var darkimg = "/static/dark-mode-6682-inv.png";
 var lightimg = "/static/dark-mode-6682.png";
+var darkbgimg = '/static/dalle2b-small.png';
+var lightbgimg = '/static/dalle3-small.png';
 // var limnodesgraph = 15;
 var limstack = 60;
-var DARKMODE = get_dark_mode();
 if (DARKMODE==1) { 
   var txtcolor = darktxtcolor; 
 } else { 
@@ -49,9 +55,9 @@ var options = {
       }
     },
     smooth: {
-      enabled: true,
+      enabled: false,
       type: "dynamic",
-      roundness: 1
+      roundness: .1
     },
   },
 
@@ -87,7 +93,7 @@ var options = {
   },
 
   physics:{
-    enabled: true,
+    enabled: false,
     forceAtlas2Based: {
       theta: 0.5,
       gravitationalConstant: 0,
@@ -125,7 +131,7 @@ var options = {
     minVelocity: 1,
     solver: 'repulsion',
     stabilization: {
-      enabled: true,
+      enabled: false,
       iterations: 2000,
       updateInterval: .1,
       onlyDynamicEdges: false,
@@ -145,7 +151,7 @@ var network = new vis.Network(container, data, options);
 function startnet() {
   console.log('starting network!');
   socket.emit('start_updates');
-  request_updates(lim=get_lim_nodes_graph());
+  request_updates(lim=3);//lim=get_lim_nodes_graph());
 }
 
 function iter_edges() { return Object.values(network.body.edges); }
@@ -255,17 +261,18 @@ function del_nodes(node_ids) {
   }
 }
 
-function clear_network() {
-  
-  iter_nodes_d().forEach(function(node_d) {
-    edgel=[];
-    network.getConnectedEdges(node_d.id).forEach(function(edge_id) {
-        edgel.push(edges.get(edge_id));
-    });
-    DATA_STACK.unshift({'nodes':[node_d], 'edges':edgel});
+function swap_back_into_stack(node_d) {
+  edgel=[];
+  network.getConnectedEdges(node_d.id).forEach(function(edge_id) {
+      edgel.push(edges.get(edge_id));
   });
-  ids = get_all('id');
-  nodes.remove(ids);
+  DATA_STACK.unshift({'nodes':[node_d], 'edges':edgel});
+  nodes.remove(node_d.id);
+}
+
+
+function clear_network() {
+  iter_nodes_d().forEach(swap_back_into_stack);
 }
 
 function add_context(node_id) {
@@ -303,15 +310,23 @@ function lim_nodes(lim=0) {
     todel=[];
     // toadd=[];
     iter_nodes_d().slice(0,nodes.length - lim).forEach(
-      function(n){ todel.push(n.id); }
+      function(n){ 
+        // todel.push(n.id); 
+        console.log(n.id);
+        swap_back_into_stack(n);
+      }
     );
-    nodes.remove(todel);
+    // nodes.remove(todel);
     console.log('>> lim_nodes',lim,'num nodes',nodes.length);
   }
 }
 
 function update_nodes(data) {
   // freeze_nodes();
+  if (data.nodes.length) {
+    nd=data.nodes[0];
+    logmsg('adding post by '+nd.author+' from '+nd.datetime_str_h);
+  }
   nodes.update(data.nodes);
   edges.update(data.edges);
   reinforce_darkmode();
@@ -339,8 +354,8 @@ function fix_nodes() {
     if(nd) {
       nd.x=n.x;
       nd.y=n.y;
-      nd.fixed=FIXED;
-      // nodes.update(nd);
+      // nd.fixed=FIXED;
+      nodes.update(nd);
     }
   });
 }
@@ -383,13 +398,13 @@ function style_nodes() {
   repos_nodes();
   size_nodes();
   // nodes.forEach(function(n) { n.fixed={x: true, y: true} });
-  for (node_d of iter_nodes_d()) {
-    nedges = network.getConnectedEdges(node_d.id);
-    if (node_d.num_replies>nedges.length) {
-      node_d.color = nodebordercolor;
-      node_d.borderWidth=5;
-    }
-  }
+  // for (node_d of iter_nodes_d()) {
+  //   nedges = network.getConnectedEdges(node_d.id);
+  //   if (node_d.num_replies>nedges.length) {
+  //     node_d.color = nodebordercolor;
+  //     node_d.borderWidth=5;
+  //   }
+  // }
 }
 
 function change_node_color(color) {
@@ -441,9 +456,21 @@ function get_all(feat) {
   return l;
 }
 
+function get_all_plus_stack(feat) {
+  ids = get_all(feat);
+  DATA_STACK.forEach(function(d) {
+    d.nodes.forEach(function(n) {
+      ids.push(n[feat]);
+    });
+  });
+  return ids;
+}
+
+
+
 
 function rankBetween(unscaledNum, allUnscaledNums, minScale, maxScale) {
-  rank = getIndexToIns(allUnscaledNums, unscaledNum + (Math.random()*.0001));
+  rank = getIndexToIns(allUnscaledNums, unscaledNum);
   return scaleBetween(
     rank,
     minScale,
@@ -457,13 +484,20 @@ function scaleBetween(unscaledNum, minAllowed, maxAllowed, min, max) {
   return (maxAllowed - minAllowed) * (unscaledNum - min) / (max - min) + minAllowed;
 }
 
+function scaleBetween2(unscaledNum, allUnscaledNums, minAllowed, maxAllowed) {
+  max = Math.max(...Object.values(allUnscaledNums));
+  min = Math.min(...Object.values(allUnscaledNums));
+  return (maxAllowed - minAllowed) * (unscaledNum - min) / (max - min) + minAllowed;
+}
+
+
 function size_nodes(max_size=40, min_size=20, score_type=SCORE_TYPE, size_by='num_replies') {
-  vals = get_all(size_by);
-  nodes.forEach(function(nd) {
-    newsizeby = nd[size_by] - network.getConnectedNodes().length;
-    nd.size = rankBetween(newsizeby, vals, min_size, max_size);
-    // nodes.update(nd);
-  })
+  // vals = get_all(size_by);
+  // nodes.forEach(function(nd) {
+  //   newsizeby = nd[size_by] - network.getConnectedNodes().length;
+  //   nd.size = rankBetween(newsizeby, vals, min_size, max_size);
+  //   // nodes.update(nd);
+  // })
 }
 
 function size_nodes_score(max_size=40, min_size=20, score_type=SCORE_TYPE) {  
@@ -498,16 +532,14 @@ function size_nodes_score(max_size=40, min_size=20, score_type=SCORE_TYPE) {
 
 
 
-function toggle_darkmode() {
-  if (DARKMODE==1) { set_light_mode(); } else { set_dark_mode(); }
-}
-function reinforce_darkmode() {
-  if (DARKMODE==1) { set_dark_mode(); } else { set_light_mode(); }
-}
 
 function set_dark_mode() {
   DARKMODE = 1;
+  $('#oulo').attr('src',darkbgimg);
+  $('#oulo').attr('opacity',0.5);
   $('body').css('background-color', darkbgcolor);
+  // $('body').css('background-image', 'url("'+darkbgimg+'")');
+  $('#optbuttons a').css('color',darkaccent);
   $('body').css('color', darktxtcolor);
   $('#tweet').css('background-color', darktweetbg);
   $('#pb-container').css('background-color', darktweetbg);
@@ -521,14 +553,17 @@ function set_dark_mode() {
 
 function set_light_mode() {
 DARKMODE = 0;
-
+$('#oulo').attr('src',lightbgimg);
+$('#oulo').css('opacity',0.9);
 $('body').css('background-color', lightbgcolor);
+// $('body').css('background-image', 'url("'+lightbgimg+'")');
 $('body').css('color', lighttxtcolor);
 $('#tweet').css('background-color', lighttweetbg);
 $('#tweet').css('border', '1px solid lightgray');
 $('input').css('background-color', lightbgcolor);
 $('input').css('color', lighttxtcolor);
 $('#nightmode').attr('src',lightimg);
+$('#optbuttons a').css('color',lightaccent);
 change_node_color(lighttxtcolor);
 socket.emit('set_darkmode', DARKMODE);
 }
@@ -567,7 +602,7 @@ network.on("blurNode", function (params) {
 
 network.on("click", function (_params) {
   node_d = get_node(_params);
-  console.log('clicked', _params.pointer.canvas);
+  // console.log('clicked', _params.pointer.canvas);
   if (node_d == undefined) {
     hide_status_div();
   } else {
@@ -612,7 +647,7 @@ network.on("oncontext", function (params) {
 
 // socket events
 
-function get_our_status_for_updates(lim=1,force_push=false) {
+function get_our_status_for_updates(lim=0,force_push=false) {
   return {
     'ids_now':get_ids_in_graph_or_stack(), 
     'force_push':force_push, 
@@ -620,9 +655,17 @@ function get_our_status_for_updates(lim=1,force_push=false) {
   };
 }
 
+function next_batch_of_nodes_please() {
+  clear_network();
+  get_more_nodes();
+  request_updates(lim=0);
+}
+
 function request_updates(lim=1, force_push=false) {
+  if(BUSY==true){return;}
+  var BUSY = true;
   ns=DATA_STACK.length.toString();
-  if (DATA_STACK.length<=get_lim_nodes_stack()) {
+  if (force_push | (DATA_STACK.length<=get_lim_nodes_stack())) {
     logmsg('refreshing with '+ns+' posts in queue @ '+get_time_str());
     socket.emit(
       'get_updates', 
@@ -633,14 +676,18 @@ function request_updates(lim=1, force_push=false) {
     )
   } else {
     logmsg('idling with '+ns+' posts in queue @ '+get_time_str());
-    // turnover_nodes();
+    turnover_nodes();
   }
   get_more_nodes();
 }
 
 function turnover_nodes() {
-  update_nodes(DATA_STACK.pop());
-  lim_nodes();
+  // sort_stack();
+  res = DATA_STACK.shift();
+  if(res) {
+    update_nodes(res);
+    lim_nodes();
+  }
 }
 
 function request_pushes() {
@@ -670,14 +717,53 @@ function receive_updates_with_stack(data) {
 
 
 function receive_updates_with_stack_pushed(data) {
-  update_nodes(data);
-  lim_nodes();
+  if(data) {
+    update_nodes(data);
+    lim_nodes();
+  }
+}
+
+function receive_updates_showing_latest_n(data) {
+  if(data) {
+    if(nodes.length < get_lim_nodes_graph()) {
+      update_nodes(data);
+    } else {
+      maybe_add_to_stack(data);
+      sort_stack();    
+      stacknow = DATA_STACK.slice(0, get_lim_nodes_graph());
+      stackids = [];
+      stacknow.forEach(function(d){
+        d.nodes.forEach(function(n){
+          stackids.push(d.id);
+        })
+      });
+
+      a=new Set(get_all('id'))
+      b=new Set(stackids);
+      bad_ids = Array.from(new Set([...a].filter(x => !b.has(x))));
+      stacknow.forEach(function(d) {
+        update_nodes(d);
+        bad=bad_ids.pop()
+        if(bad!=undefined){
+          swap_back_into_stack(nodes.get(bad));
+        }
+      });
+    }
+  }
 }
 
 socket.on('get_updates', function(data) {
+  var BUSY = false;
+  // console.log('BUSY',BUSY);
   // console.log('got updates:',data);
-  receive_updates_with_stack(data);
-  // receive_updates_with_stack_pushed(data);
+  receive_updates_with_stack_pushed(data);
+  // receive_updates_showing_latest_n(data);
+  // repos_nodes();
+  // if(nodes.length < get_lim_nodes_graph()) {
+  //   request_updates();
+  // } else {
+  // setTimeout(request_updates, TIME_TIL_UPDATE);
+  // }
 });
 
 function maybe_add_to_stack(data) {
@@ -687,7 +773,13 @@ function maybe_add_to_stack(data) {
   DATA_STACK.push(data);
 }
 
+function sort_stack() {
+  // console.log(DATA_STACK);
+  DATA_STACK = DATA_STACK.sort((a,b) => b.nodes[0].timestamp - a.nodes[0].timestamp);
+}
+
 function get_more_nodes() {
+  
   while ((DATA_STACK.length > 0) && (nodes.length < get_lim_nodes_graph())) {
     data = DATA_STACK.pop()
     if(data) {
@@ -701,90 +793,44 @@ socket.on('logmsg', function(msg) {if(msg){logmsg(msg)};});
 
 // Other events
 
-function set_mode_markread() {
-  if (MODE!='markread') {
-    MODE = 'markread';
-    $('body').css('cursor', 'crosshair');
-  }
-}
-function set_mode_getcontext() {
-  if (MODE!='getcontext') {
-    MODE = 'getcontext';
-    $('body').css('cursor', 'help');
-  }
-}
-function set_mode_default() {
-  if (MODE!='default') {
-    MODE = 'default';
-    $('body').css('cursor', 'default');
-  }
-}
-
-function toggle_mode_read() {
-  if (MODE=='markread') {
-    set_mode_default();
-  } else {
-    set_mode_markread();
-  }
-}
-function toggle_mode_info() {
-  if (MODE=='getcontext') {
-    set_mode_default();
-  } else {
-    set_mode_getcontext();
-  }
-}
-
-
 $(document).on('keydown', function (event) {
   // console.log('event.which =',event.which);
   if (event.which==27) {   // escape
     set_mode_default();
     network.unselectAll();
     hide_status_div();
+        
   } else if (event.ctrlKey | event.metaKey) {
-    // console.log(event);
+
     if (event.which == 65) { // a (select all)
       event.preventDefault();
       node_ids = [];
       iter_nodes_d().forEach(function(nd){node_ids.push(nd.id)});
       network.selectNodes(node_ids);
     } 
-    else if (event.which == 82) {
-      // command r
-      event.preventDefault();
-      clear_network();
-      get_more_nodes();
-      request_updates(lim=get_lim_nodes_graph());
-    }
 
-    // } else {
-      // r (refresh)
-      // set_mode_markread();
-      // toggle_mode_read();
-    // }
-  } else if (event.altKey) {
-    // toggle_mode_info();
-    // set_mode_getcontext();
-  } else if ((event.which==88) | (event.which==82) | (event.which==8) | (event.which==46)) { // x or r or backspace or del
-    // del_nodes(network.getSelectedNodes());
-    network.getSelectedNodes().forEach(function(n){
-      // console.log(n);
-      del_node(n);
-    })
+  } else if (event.which==82) {  // r
+    request_updates();
+  
+  } else if (event.which==68) {  // d
+    network.getSelectedNodes().forEach(del_node);
+
   } else if (event.which==78) {  // n
-    // request_updates();
-    request_updates(lim=get_lim_nodes_graph(), force_push=true);
-    // get_more_nodes();
-  }
-  // else {
-    // set_mode_default()
-  // }   
-});
+    turnover_nodes();
 
-// $(document).on('keyup', function (event) {
-//   set_mode_default();
-// });
+  } else if (event.which==76) {  // l
+    sort_stack();
+    turnover_nodes();
+    
+  } else if (event.which==77) { // m
+    network.getSelectedNodes().forEach(add_context);
+
+  } else if (event.which==67) { // c
+    next_batch_of_nodes_please();
+
+  }
+  
+});
 
 
 
@@ -804,40 +850,50 @@ function repos_nodes(overwrite_x=false, overwrite_y=false) {
   var height = canvas.scrollHeight;
   var max_w = (width/2) - 50;
   var max_h = (height/2) - 50;
-  console.log(width,height, max_w,max_h);
+
   nodes.forEach(function(nd) {
-    if(nd.x==nd.x) { nd.x=smudge(rankBetween(nd.score, scores, -1*max_w, max_w), fac=0); }
-    if(nd.y==nd.y) { nd.y=smudge(rankBetween(-1*nd.timestamp, times_inv, -1*max_h, max_h), fac=0) - 50; }
-    nodes.update(nd);
-    // moveNodeAnim(nd.id, xx, yy, 1);
+    // ndx=smudge(rankBetween(nd.score, scores, -1*max_w, max_w), 20);
+    // ndy=smudge(rankBetween(-1*nd.timestamp, times_inv, -1*max_h, max_h), 20)
+    ndx=smudge(rankBetween(-1*nd.timestamp, times_inv, -1*max_w, max_w), 20);
+    ndy=smudge(rankBetween(nd.score, scores, -1*max_h, max_h), 20)
+
+    // ndx=scaleBetween2(nd.score, scores, -1*max_w, max_w);
+    // ndy=scaleBetween2(-1*nd.timestamp, times_inv, -1*max_h, max_h);
+    // nd.x=ndx;
+    // nd.y=ndy;
+    // nodes.update(nd);
+    // if(nd.x==undefined){nd.x=0;}
+    // if(nd.y==undefined){nd.y=0;}
+    // nodes.update(nd);
+    // nd.x=ndx; nd.y=ndy; nodes.update(nd);
+    moveNodeAnim(nd.id,ndx,ndy,TIME_TIL_MOVED);
+
+    // nodes.update(nd);
+    // if(nodes.length < get_lim_nodes_graph()) {
+    // if((nd.x==undefined) | (nd.y==undefined)) {
+    // // if(false){
+    //   nd.x=ndx; //smudge(ndx,max_w);
+    //   nd.y=-1 * height; //smudge(ndy,0);
+    //   nodes.update(nd);
+    // } 
+    // // else {
+    //   moveNodeAnim(nd.id, ndx, ndy, 1000);
+    // // }
   });
-
-
-    // y
-
-
-    // if (overwrite_x | (nd.x==undefined)) {
-    //   // nd.x = rankBetween(nd.timestamp, times, width/2,-1*width/2);
-    //   new_x = rankBetween(-1*nd.timestamp, times_inv, width/2,-1*width/2);
-    // } else {
-    //   new_x = 
-    // }
-    // if (overwrite_y | (nd.y==undefined)) {
-    //   // nd.y = rankBetween(nd.score, scores, height/2, -1*height/2);
-      
-    // }
     
 };
 
 
 // start
 $(document).ready(function(){  
+  reinforce_darkmode();
   startnet();
+  $(document).tooltip();
 
-  // setInterval(function() { fix_nodes(); }, 1);  
+  // setInterval(function() { fix_nodes(); }, 10);  
   // setInterval(function() { get_more_nodes(); }, 500);
-  setInterval(function() { request_pushes(); }, 500);
-  setInterval(function() { request_updates(); },500);
+  setInterval(function() { request_pushes(); }, 100);
+  setInterval(function() { request_updates(); },TIME_TIL_UPDATE);
   
   reinforce_darkmode();
 

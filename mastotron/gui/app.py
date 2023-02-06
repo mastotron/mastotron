@@ -1,17 +1,18 @@
-# make sure to use eventlet and call eventlet.monkey_patch()
-# import eventlet
-# eventlet.monkey_patch()
+SEEN=set()
 
-import os,sys,socket,time,webbrowser
+
+import os,sys,socket,time,webbrowser,signal
 path_app = os.path.realpath(__file__)
 path_code = os.path.abspath(os.path.join(path_app,'..','..'))
 path_codedir = os.path.abspath(os.path.join(path_code,'..'))
 sys.path.insert(0,path_codedir)
+import threading
 
 from mastotron import *
 from mastotron.imports import __version__ as vnum
 
-from threading import Lock,Thread
+from threading import Lock,Thread,Event
+
 from flask import Flask, render_template, request, redirect, url_for, session, current_app
 from flask_session import Session
 from flask_socketio import SocketIO, send, emit
@@ -28,10 +29,23 @@ namespace = 'mastotron.web'
 seen_posts = set()
 STARTED=None
 new_urls = set()
+new_msgs = []
 
+@lru_cache
+def Tron():
+    obj = Mastotron()
+    obj._logmsg = logmsg_tron
+    return obj
 
-def logmsg(x): 
-    emit('logmsg',str(x))
+def logmsg_tron(*x,**y):
+    global new_msgs
+
+    new_msgs.append(' '.join(str(xx) for xx in x))
+    print('>>>',new_msgs[-1])
+
+def logmsg(*x,**y):
+    emit('logmsg',' '.join(str(xx) for xx in x))
+    threading.Event().wait(0.1)
 def logsuccess(x): emit('logsuccess',str(x))
 def logerror(x): emit('logerror',str(x))
 
@@ -66,7 +80,7 @@ app.config['SESSION_PERMANENT'] = True
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SESSION_FILE_DIR'] = os.path.join(path_data, 'flask_session')
 Session(app)
-socketio = SocketIO(app, manage_session=False, async_mode="eventlet")
+socketio = SocketIO(app, manage_session=False, async_handlers=False)
 # socketio = SocketIO(app, manage_session=False, async_mode="threading")
 
 
@@ -89,9 +103,10 @@ def keepalive():
 
 def get_config(d={}):
     defaultd={
-        'LIM_NODES_GRAPH':5,
-        'LIM_NODES_STACK':100,
-        'DARKMODE':1
+        'LIM_NODES_GRAPH':10,
+        'LIM_NODES_STACK':25,
+        'DARKMODE':1,
+        'VNUM':vnum,
     }
     sessiond={k:v for k,v in session.items() if k and k[0]!='_'}
     outd = {**defaultd, **sessiond, **d}
@@ -170,7 +185,9 @@ def start_updates(data={}):
 
 @socketio.event
 def get_pushes(data={}):
-    global new_urls
+    global new_urls, new_msgs
+    if new_msgs: logmsg(new_msgs.pop())
+
     new_posts = PostList(new_urls)
     new_urls = set()
     if new_posts:
@@ -180,25 +197,34 @@ def get_pushes(data={}):
             force_push=True
         )
 
+MAX_UPDATE=5
+
 @socketio.event
 def get_updates(data={}):
-    print(f'< get_updates {data}')
+    global SEEN
     acct = get_acct_name()
     if not acct: return
-    unread_only = data.get('unread_only',True)
-    ids_now=set(data.get('ids_now',[]))
-    lim = data.get('lim')
-    if not lim: lim=get_config().get('LIM_NODES_STACK')
+    SEEN|=set(data.get('ids_now',[]))
+    lim = data.get('lim') if data.get('lim') else get_config().get('LIM_NODES_STACK')
     force_push = data.get('force_push',False)
-    print(f'>> getting {lim} updates for {acct} ({len(ids_now)} ids seen prior)')
+
+    lim=lim if lim<MAX_UPDATE else MAX_UPDATE
     iterr=Tron().timeline_iter(
         acct, 
-        unread_only=True,
-        seen=ids_now,
+        unread_only=data.get('unread_only',True),
+        seen=SEEN,
+        max_mins=60*24,
         lim=lim
     )
-    for post in iterr: 
-        update_posts([post], ids_done=ids_now, force_push=force_push)
+    for i,post in enumerate(iterr):
+        if i>=lim: break
+        update_posts(
+            [post], 
+            ids_done=SEEN, 
+            force_push=force_push
+        )
+        SEEN|={p._id for p in post.allcopies}
+
 
 
 def update_posts(tl, omsg='refreshed', emit_key='get_updates',ids_done=None,unread_only=True, force_push=False):
@@ -221,8 +247,10 @@ def update_posts(tl, omsg='refreshed', emit_key='get_updates',ids_done=None,unre
         omsg = f'{len(nodes)+len(edges)} new updates @ {get_time_str()}'
         if nodes or edges:
             odata = dict(nodes=nodes, edges=edges, logmsg=omsg, force_push=force_push)
-            for n in nodes: print('++',n['id'])
+            # for n in nodes: print('++',n['id'])
             emit(emit_key, odata)
+            # time.sleep(0.1)
+            threading.Event().wait(.1)
             return True
     
     # omsg = f'no new updates @ {get_time_str()}'
@@ -281,7 +309,7 @@ class OpenBrowser(Thread):
     def run(self):
         while self.notResponding():
             # print('Did not respond')
-            time.sleep(0.5)
+            threading.Event().wait(0.1)
         # print('Responded')
         webbrowser.open_new(f'http://{HOST}:{PORT}/') 
 

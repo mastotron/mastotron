@@ -20,6 +20,10 @@ class Mastotron():
         self._posts = {}
         self._seen_urls = set()
         self._caches = CACHES
+        self._logmsg = print
+
+    def logmsg(self,*x,**y):
+        return self._logmsg(*x,**y)
     
     def _get_path_api_auth(self, server):
         return os.path.join(
@@ -187,47 +191,47 @@ class Mastotron():
         return cache[uri]
 
     
-    def latest(self, acct='', lim=LIM_TIMELINE, **kwargs):
-        iterr = self.iter_latest(acct=acct, lim=lim, **kwargs)
-        return PostList(iterr, lim=lim)
+    # def latest(self, acct='', lim=LIM_TIMELINE, **kwargs):
+    #     iterr = self.iter_latest(acct=acct, lim=lim, **kwargs)
+    #     return PostList(iterr, lim=lim)
 
-    def iter_latest(
-            self,
-            acct='', 
-            unread_only=True, 
-            lim=LIM_TIMELINE, 
-            follow_chains=True, 
-            **kwargs):
+    # def iter_latest(
+    #         self,
+    #         acct='', 
+    #         unread_only=True, 
+    #         lim=LIM_TIMELINE, 
+    #         follow_chains=True, 
+    #         **kwargs):
             
-        def iter_posts():
-            if acct: yield from self.iter_timeline(acct, unread_only=unread_only, **kwargs)
-            yield from self.database_iter(**kwargs)
+    #     def iter_posts():
+    #         if acct: yield from self.iter_timeline(acct, unread_only=unread_only, **kwargs)
+    #         yield from self.database_iter(**kwargs)
 
-        def iter_posts_filtered():
-            seen=set()
-            for post in iter_posts():
-                if not post in seen:
-                    seen.add(post)
-                    if unread_only and post.is_read: continue
-                    yield post
+    #     def iter_posts_filtered():
+    #         seen=set()
+    #         for post in iter_posts():
+    #             if not post in seen:
+    #                 seen.add(post)
+    #                 if unread_only and post.is_read: continue
+    #                 yield post
         
-        yield from iter_posts_filtered()
+    #     yield from iter_posts_filtered()
 
 
-    def gdb_iter(self,timestamp=None,**kwargs):
-        seen=set()
-        # iterr=tqdm(
-        #     list(iter_graphtimes(timestamp)),
-        #     desc=f'Querying every {GRAPHTIME_ROUNDBY} mins'
-        # )
-        iterr=iter_graphtimes(timestamp)
-        for timestr in iterr:
-            rels = TronDB().get_rels_inc(timestr, REL_GRAPHTIME)
-            for id in rels:
-                post=Post(id).source
-                if post not in seen:
-                    seen.add(post)
-                    yield post                
+    # def gdb_iter(self,timestamp=None,**kwargs):
+    #     seen=set()
+    #     # iterr=tqdm(
+    #     #     list(iter_graphtimes(timestamp)),
+    #     #     desc=f'Querying every {GRAPHTIME_ROUNDBY} mins'
+    #     # )
+    #     iterr=iter_graphtimes(timestamp)
+    #     for timestr in iterr:
+    #         rels = TronDB().get_rels_inc(timestr, REL_GRAPHTIME)
+    #         for id in rels:
+    #             post=Post(id).source
+    #             if post not in seen:
+    #                 seen.add(post)
+    #                 yield post                
 
     # def iter_timeline(
     #         self,
@@ -298,7 +302,7 @@ class Mastotron():
         return defaultdict(None)
 
 
-    @lru_cache
+    # @lru_cache
     def timeline_minute(
             self,
             account_name='',
@@ -315,24 +319,24 @@ class Mastotron():
             minute_blur=minute_blur
         )
 
-        if dkey in self.busy:
-            print('on the line now...')
-            return []
+        # if self.busy.get(dkey): 
+            # print('busy right now')
+            # return []
+        # self.busy[dkey]=True
 
-        self.busy[dkey]=True
         with self.cache('timeline_minute') as cache:
             if force or not dkey in cache:
-                print('? Requesting updates for period ...',dkey,end=' ',flush=True)
+                self.logmsg('requesting updates for period ...',dkey,end=' ',flush=True)
                 api = self.api_user(account_name)
                 timeline = api.timeline(max_id=max_id, min_id=min_id, **timeline_opts)
+                # print('<<< got res',timeline)
                 posts=PostList(timeline)
-                print(f'{len(posts)} posts found',flush=True)
+                if posts: print(f'{len(posts)} posts found',flush=True)
                 if save: cache[dkey] = [p._id for p in posts]
             else:
                 posts = PostList(cache[dkey])
-            
-            self.busy[dkey]=None
 
+            # self.busy[dkey]=False
             return posts
 
 
@@ -342,17 +346,24 @@ class Mastotron():
             timestamp=None, 
             minute_blur=BLUR_MINUTES, 
             incl_now=False, 
+            only_now=False,
             lim=LIM_TIMELINE, 
             unread_only=False, 
             seen=set(), 
-            max_mins=60*4,
+            max_mins=60,
             filter_func=lambda post: True,
             **kwargs):
-        iterr=iter_datetimes(timestamp, minute_blur=minute_blur, max_mins=max_mins)
+
+        iterr=iter_datetimes(
+            timestamp, 
+            minute_blur=minute_blur, 
+            max_mins=max_mins
+        )
+        if only_now: incl_now=True
         if not incl_now: next(iterr)
         i=0
-
         for dtobj in iterr:
+            if i>=lim: break
             posts = self.timeline_minute(
                 account_name=account_name,
                 dtobj=dtobj,
@@ -360,13 +371,14 @@ class Mastotron():
                 **kwargs
             )
             for post in posts:
+                if i>=lim: break
                 if not unread_only or not post.is_read:
                     if not {p._id for p in post.allcopies} & seen:
                         if filter_func(post):
                             yield post
                             i+=1
-                            if i>lim: break
-            if i>lim: break
+            if only_now: break
+                
     
     def timeline_iter_mp(
             self, 
@@ -415,3 +427,7 @@ class Mastotron():
 
     def timeline(self, account_name='', **kwargs): 
         return PostList(self.timeline_iter(account_name=account_name, **kwargs))
+
+
+
+    def la

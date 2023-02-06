@@ -513,12 +513,13 @@ class PostModel(DictModel):
     def get_label(self, limsize=20, max_lines=3, **kwargs):
         text = self.text
         for url in find_urls(text): text=text.replace(url,url[:20])
-        
-        lines = textwrap.wrap(text,limsize)
-        if max_lines and len(lines)>max_lines:
-            lines=lines[:max_lines]
-            lines[-1]+='...'
-        
+        text=' '.join([w for w in text.split() if w and w[0]!='@'])
+        lines=[]
+        if text:
+            lines = textwrap.wrap(text,limsize)
+            if max_lines and len(lines)>max_lines:
+                lines=lines[:max_lines]
+                lines[-1]+='...'
         stext='\n'.join(lines)        
         return stext
 
@@ -572,6 +573,8 @@ class PostModel(DictModel):
         odx['shape'] = 'circularImage' # if not same_author else 'box'
         # odx['shape'] = 'image'
         odx['image'] = post.author.avatar
+        odx['author'] = post.author.account
+        odx['author_name'] = post.author.display_name
         # odx['image'] = post_to_svg(post)
         # odx['label']=post.get_label(limsize=70, limwords=7) if not post.is_boost else 'RT'
         odx['label']=post.label
@@ -580,6 +583,7 @@ class PostModel(DictModel):
         odx['scores'] = post.scores
         odx['score'] = post.scores.get(SCORE_TYPE, np.nan)
         odx['timestamp'] = post.timestamp
+        odx['datetime_str_h'] = post.datetime_str_h
         # odx['fixed']=dict(x=False,y=False)
         odx['num_replies'] = post.num_replies
         odx['is_read']=post.is_read
