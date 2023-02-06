@@ -31,7 +31,7 @@ STARTED=None
 new_urls = set()
 new_msgs = []
 
-@lru_cache
+# @lru_cache
 def Tron():
     obj = Mastotron()
     obj._logmsg = logmsg_tron
@@ -197,7 +197,7 @@ def get_pushes(data={}):
             force_push=True
         )
 
-MAX_UPDATE=5
+MAX_UPDATE=10
 
 @socketio.event
 def get_updates(data={}):
@@ -207,23 +207,30 @@ def get_updates(data={}):
     SEEN|=set(data.get('ids_now',[]))
     lim = data.get('lim') if data.get('lim') else get_config().get('LIM_NODES_STACK')
     force_push = data.get('force_push',False)
+    only_latest = data.get('only_latest',False)
+    max_mins = data.get('max_mins',60*24)
+    unread_only=data.get('unread_only',True)
 
     lim=lim if lim<MAX_UPDATE else MAX_UPDATE
-    iterr=Tron().timeline_iter(
+    # iterr=Tron().timeline_iter(
+    tl=Tron().timeline(
         acct, 
-        unread_only=data.get('unread_only',True),
+        unread_only=unread_only,
         seen=SEEN,
-        max_mins=60*24,
-        lim=lim
+        max_mins=max_mins,
+        lim=lim,
+        only_latest=only_latest
     )
-    for i,post in enumerate(iterr):
-        if i>=lim: break
-        update_posts(
-            [post], 
-            ids_done=SEEN, 
-            force_push=force_push
-        )
-        SEEN|={p._id for p in post.allcopies}
+    update_posts(tl, ids_done=SEEN, force_push=force_push)
+    SEEN|={p._id for post in tl for p in post.allcopies}
+    # for i,post in enumerate(iterr):
+    #     if i>=lim: break
+    #     update_posts(
+    #         [post],
+    #         ids_done=SEEN, 
+    #         force_push=force_push
+    #     )
+    #     SEEN|={p._id for p in post.allcopies}
 
 
 

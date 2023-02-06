@@ -1,6 +1,6 @@
 // vars
-var TIME_TIL_UPDATE = 3000;
-var TIME_TIL_MOVED = 1000;
+var TIME_TIL_UPDATE = 2500;
+var TIME_TIL_MOVED = 500;
 var BUSY=false;
 var FIXED = {x:false,y:false}
 var MODE = 'default';
@@ -55,9 +55,9 @@ var options = {
       }
     },
     smooth: {
-      enabled: false,
-      type: "dynamic",
-      roundness: .1
+      enabled: true,
+      type: "cubicBezier",
+      roundness: .5
     },
   },
 
@@ -151,7 +151,7 @@ var network = new vis.Network(container, data, options);
 function startnet() {
   console.log('starting network!');
   socket.emit('start_updates');
-  request_updates(lim=3);//lim=get_lim_nodes_graph());
+  request_updates(lim=get_lim_nodes_graph());
 }
 
 function iter_edges() { return Object.values(network.body.edges); }
@@ -334,6 +334,10 @@ function update_nodes(data) {
   // unfreeze_nodes();
   style_edges();
   // lim_nodes();
+  
+  setTimeout(function(){
+    logmsg('currently '+nodes.length.toString()+' posts visible and '+DATA_STACK.length.toString()+' in queue');
+  }, 100);
 }
 
 function sleep(ms) {
@@ -535,11 +539,10 @@ function size_nodes_score(max_size=40, min_size=20, score_type=SCORE_TYPE) {
 
 function set_dark_mode() {
   DARKMODE = 1;
-  $('#oulo').attr('src',darkbgimg);
-  $('#oulo').attr('opacity',0.5);
+  // $('#oulo').attr('src',darkbgimg);
   $('body').css('background-color', darkbgcolor);
   // $('body').css('background-image', 'url("'+darkbgimg+'")');
-  $('#optbuttons a').css('color',darkaccent);
+  // $('#optbuttons a').css('color',darkaccent);
   $('body').css('color', darktxtcolor);
   $('#tweet').css('background-color', darktweetbg);
   $('#pb-container').css('background-color', darktweetbg);
@@ -553,8 +556,7 @@ function set_dark_mode() {
 
 function set_light_mode() {
 DARKMODE = 0;
-$('#oulo').attr('src',lightbgimg);
-$('#oulo').css('opacity',0.9);
+// $('#oulo').attr('src',lightbgimg);
 $('body').css('background-color', lightbgcolor);
 // $('body').css('background-image', 'url("'+lightbgimg+'")');
 $('body').css('color', lighttxtcolor);
@@ -563,7 +565,7 @@ $('#tweet').css('border', '1px solid lightgray');
 $('input').css('background-color', lightbgcolor);
 $('input').css('color', lighttxtcolor);
 $('#nightmode').attr('src',lightimg);
-$('#optbuttons a').css('color',lightaccent);
+// $('#optbuttons a').css('color',lightaccent);
 change_node_color(lighttxtcolor);
 socket.emit('set_darkmode', DARKMODE);
 }
@@ -690,6 +692,15 @@ function turnover_nodes() {
   }
 }
 
+function turnover_nodes_rev() {
+  // sort_stack();
+  res = DATA_STACK.pop();
+  if(res) {
+    update_nodes(res);
+    lim_nodes();
+  }
+}
+
 function request_pushes() {
   // logmsg('checking pushes @ '+get_time_str());
   socket.emit('get_pushes', get_our_status_for_updates())
@@ -810,13 +821,14 @@ $(document).on('keydown', function (event) {
     } 
 
   } else if (event.which==82) {  // r
-    request_updates();
+    request_updates(lim=3, force_push=true);
   
   } else if (event.which==68) {  // d
     network.getSelectedNodes().forEach(del_node);
 
-  } else if (event.which==78) {  // n
-    turnover_nodes();
+  // } else if (event.which==78) {  // n
+    // sort_stack();
+    // turnover_nodes_rev();
 
   } else if (event.which==76) {  // l
     sort_stack();
@@ -825,7 +837,8 @@ $(document).on('keydown', function (event) {
   } else if (event.which==77) { // m
     network.getSelectedNodes().forEach(add_context);
 
-  } else if (event.which==67) { // c
+  // } else if (event.which==67) { // c
+  } else if (event.which==78) { // n
     next_batch_of_nodes_please();
 
   }
@@ -852,10 +865,10 @@ function repos_nodes(overwrite_x=false, overwrite_y=false) {
   var max_h = (height/2) - 50;
 
   nodes.forEach(function(nd) {
-    // ndx=smudge(rankBetween(nd.score, scores, -1*max_w, max_w), 20);
-    // ndy=smudge(rankBetween(-1*nd.timestamp, times_inv, -1*max_h, max_h), 20)
-    ndx=smudge(rankBetween(-1*nd.timestamp, times_inv, -1*max_w, max_w), 20);
-    ndy=smudge(rankBetween(nd.score, scores, -1*max_h, max_h), 20)
+    ndx=smudge(rankBetween(nd.score, scores, -1*max_w, max_w), 20);
+    ndy=smudge(rankBetween(-1*nd.timestamp, times_inv, -1*max_h, max_h), 20)
+    // ndx=smudge(rankBetween(-1*nd.timestamp, times_inv, -1*max_w, max_w), 20);
+    // ndy=smudge(rankBetween(nd.score, scores, -1*max_h, max_h), 20)
 
     // ndx=scaleBetween2(nd.score, scores, -1*max_w, max_w);
     // ndy=scaleBetween2(-1*nd.timestamp, times_inv, -1*max_h, max_h);

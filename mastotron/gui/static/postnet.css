@@ -23,8 +23,8 @@ body::-webkit-scrollbar {
     position: fixed; 
     top:0; 
     left:0;
-    opacity: 0.75;
-    width:77px;
+    opacity: 0.66;
+    width:66px;
     z-index:0;
 }
 
@@ -90,16 +90,16 @@ a { color: lightblue; }
 #optbuttons {
     position: fixed;
     top: 75px;
-    left:18px;
-    font-size:3em;
+    left:25px;
+    font-size:2.5em;
 }
 
 #postnetviz {
-height: 95vh;
-width:  95vw;
+height: 90vh;
+width:  90vw;
 border: 1px dashed rgba(100,100,100,0);
 margin:0;
-margin-left:50px;
+margin-left:75px;
 padding:0;
 outline:0;
 z-index: 0;
