@@ -1,5 +1,8 @@
 on:
   push:
+    branches:
+      - master
+      - develop
 
 jobs:
   create_release:
