@@ -9,7 +9,7 @@ sys.path.insert(0,path_codedir)
 import threading
 
 from mastotron import *
-from mastotron.imports import __version__ as vnum
+from mastotron import __version__ as vnum
 
 from threading import Lock,Thread,Event
 
