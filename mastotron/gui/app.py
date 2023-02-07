@@ -18,7 +18,7 @@ from flask_session import Session
 from flask_socketio import SocketIO, send, emit
 from mastodon import StreamListener
 import os,time,sys,random
-# from engineio.async_drivers import eventlet
+from engineio.async_drivers import eventlet
 # from engineio.async_drivers import threading
 
 import logging
@@ -39,9 +39,8 @@ def Tron():
 
 def logmsg_tron(*x,**y):
     global new_msgs
-
     new_msgs.append(' '.join(str(xx) for xx in x))
-    print('>>>',new_msgs[-1])
+    # print('>>>',new_msgs[-1])
 
 def logmsg(*x,**y):
     emitt('logmsg',' '.join(str(xx) for xx in x))
@@ -57,25 +56,43 @@ def emitt(key,val,*vals,broadcast=False,**opts):
 HOSTPORTURL=f'http://{HOST}:{PORT}'
 
 LINE1=f'MASTOTRON {vnum}'
-LINE2=f'URL: {HOSTPORTURL}'
-LINE3='(Visit this URL in your browser. It is now copied to your clipboard.)'
-LOGO=r'''
-                           _               _                             
-  _ __    __ _     ___    | |_     ___    | |_      _ _    ___    _ _    
- | '  \  / _` |   (_-<    |  _|   / _ \   |  _|    | '_|  / _ \  | ' \   
- |_|_|_| \__,_|   /__/_   _\__|   \___/   _\__|   _|_|_   \___/  |_||_|  
-_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""| 
-"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-' 
+LINE2=f'{HOSTPORTURL}'
+LINE3='(Visit this URL in your browser.'
+LINE4='It is now copied to your clipboard.)'
+# LINE4='(To exit, hold Ctrl+C or close terminal window.)'
+LOGO=r'''                      _        _                   
+                     | |      | |                  
+  _ __ ___   __ _ ___| |_ ___ | |_ _ __ ___  _ __  
+ | '_ ` _ \ / _` / __| __/ _ \| __| '__/ _ \| '_ \ 
+ | | | | | | (_| \__ \ || (_) | |_| | | (_) | | | |
+ |_| |_| |_|\__,_|___/\__\___/ \__|_|  \___/|_| |_|
 '''
-lwid=max(len(lstr) for lstr in LOGO.split('\n'))
-WELCOME_MSG = f'''
-{LOGO.center(lwid)}
 
+ELE=r'''
+                 /eeeeeeeeeee\ 
+   /RRRRRRRRRR\ /eeeeeeeeeeeee\ /RRRRRRRRRR\ 
+  /RRRRRRRRRRRR\|eeeeeeeeeeeee|/RRRRRRRRRRRR\ 
+ /RRRRRRRRRRRRRR +++++++++++++ RRRRRRRRRRRRRR\ 
+|RRRRRRRRRRRRRR ############### RRRRRRRRRRRRRR| 
+|RRRRRRRRRRRRR ######### ####### RRRRRRRRRRRRR| 
+ \RRRRRRRRRRR ######### ######### RRRRRRRRRR/ 
+   |RRRRRRRRR ########## ######## RRRRRRRR| 
+  |RRRRRRRRRR ################### RRRRRRRRR| 
+               ######     ###### 
+               #####       ##### 
+               #nnn#       #nnn#
+'''
+
+
+lwid=max(len(lstr) for lstr in ELE.split('\n'))
+WELCOME_MSG = f'''
+{ELE.center(lwid)}
 {LINE1.center(lwid)}
 
 {LINE2.center(lwid)}
 
 {LINE3.center(lwid)}
+{LINE4.center(lwid)}
 '''
 
 
@@ -344,12 +361,16 @@ def mainview(**kwargs):
 def main(debug=False, **kwargs): 
     pyperclip.copy(HOSTPORTURL)
     print(WELCOME_MSG)
-    return socketio.run(
-        app, 
-        debug=debug, 
-        # allow_unsafe_werkzeug=True,
-        port=PORT,
-        host=HOST
-    )
+    try:
+        return socketio.run(
+            app, 
+            debug=debug, 
+            # allow_unsafe_werkzeug=True,
+            port=PORT,
+            host=HOST
+        )
+    except (KeyboardInterrupt,EOFError):
+        print('goodbye')
+        exit()
 
 if __name__=='__main__': mainview(debug=False)

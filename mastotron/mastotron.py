@@ -6,7 +6,7 @@ NUM_GOT_STATUS=0
 
 @lru_cache()
 def Tron():
-    print('creating Tron object')
+    # print('creating Tron object')
     return Mastotron()
 
 CACHES = {}

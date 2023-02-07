@@ -20,26 +20,27 @@ function prompt_for_num_nodes() {
     reinforce_darkmode();
 }
 
-msg=`
-<p>Mastotron is a different, (for now read-only) interface to Mastodon. Simply connect your account via OAuth and interact with your timeline in a different way.</p>
 
-<li>Hover over a node to read it.</li>
-<li>Right-click it to load replies.</li>
-<li>Press (D) to dismiss it.</li>
-<li>Press (C) to load its context/replies into the network.</li>
-<li>Press (R) to refresh data.</li>
-<li>Press (L) for latest in queue.</li>
-<li>Press (N) for next in queue.</li>
-
-<p>Crucially, <i>a dismissed post will never re-appear.</i> This is good! It means you can "mark as read" a post and by never seeing it again you can trust that more of your timeline is new content.</p>
-
-<p>This is the alpha, prebeta variant of this code so if it breaks try just closing the browser window and restarting the program.</p>
-`
 
 function gethelpmsg() {
+  helpmsgnow=`
+  <p>Mastotron is a different, (for now read-only) interface to Mastodon. Simply connect your account via OAuth and interact with your timeline in a different way.</p>
+
+  <li>Hover over a node to read it.</li>
+  <li>Right-click it to load replies.</li>
+  <li>Press (D) to dismiss it.</li>
+  <li>Press (C) to load its context/replies into the network.</li>
+  <li>Press (R) to refresh data.</li>
+  <li>Press (L) for latest in queue.</li>
+  <li>Press (N) for next in queue.</li>
+
+  <p>Crucially, <i>a dismissed post will never re-appear.</i> This is good! It means you can "mark as read" a post and by never seeing it again you can trust that more of your timeline is new content.</p>
+
+  <p>This is the alpha, prebeta variant of this code so if it breaks try just closing the browser window and restarting the program.</p>
+  `
   pb.alert(
     function() {},
-    msg,
+    helpmsgnow,
     'OK',                       // Ok text
     {closeWithEscape: true},
   );
