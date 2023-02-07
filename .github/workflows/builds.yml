@@ -15,11 +15,13 @@ jobs:
       with:
         python-version: 3.8
 
-    - run: pip install -U pip
-    - run: pip install -r requirements.txt pyinstaller
+    - run: python -m pip install -U pip
+    - run: python -m pip install -r requirements.txt pyinstaller
     - run: pyinstaller build.spec
     # Optionally verify that it works (provided that it does not need user interaction)
-    - run: ./dist/MastotronApp
+    #- run: ./dist/MastotronApp
+    - run: python setup.py sdist
+    
     - uses: actions/upload-artifact@v2
       with:
         path: dist/*
