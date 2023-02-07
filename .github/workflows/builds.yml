@@ -27,7 +27,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ['windows-latest', 'ubuntu-latest', 'macos-latest']
+        os: ['ubuntu-latest', 'macos-latest']
 
     steps:
     - uses: actions/checkout@v2
@@ -37,29 +37,64 @@ jobs:
 
     - run: python -m pip install -U pip
     - run: python -m pip install -r requirements.txt pyinstaller
-    - run: pyinstaller build.spec
-    # Optionally verify that it works (provided that it does not need user interaction)
-    #- run: ./dist/MastotronApp
-    - run: python setup.py sdist
-    
-    # - uses: actions/upload-artifact@v2
-    #   with:
-    #     path: dist/*
 
-    # and finally do an upload!
-    - name: Upload release assets
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    ### SOURCE?
+    - name: Package source
+      if: ${{ matrix.platform == 'ubuntu-latest' }}
+      run: python setup.py sdist
+
+    
+    ### WINDOWS?
+    - name: Package Windows app Application
+      if: ${{ matrix.platform == 'ubuntu-latest' }}
+      uses: JackMcKew/pyinstaller-action-windows@main
       with:
-        upload_url: ${{ needs.create_release.outputs.upload_url }}
-        # This is how it will be named on the release page. Put hatever name
-        # you like, remember that they need to be different for each platform.
-        # You can choose any build matrix parameters. For Rust I use the
-        # target triple.
-        asset_name: Mastotron-${{ matrix.config.os }}
-        # The path to the file you want to upload.
-        asset_path: ./dist/MastotronApp
-        # probably you will need to change it, but most likely you are
-        # uploading a binary file
-        asset_content_type: application/octet-stream
+        path: .
+  
+
+    ## BUILD
+    - run: pyinstaller build.spec
+
+    
+    
+    
+
+
+    # - name: Upload Files to a GitHub Release (Windows)
+    #   if: ${{ matrix.platform == 'windows-latest' }}
+    #   uses: svenstaro/upload-release-action@2.2.1
+    #   with:
+    #     repo_token: ${{ secrets.GITHUB_TOKEN }}
+    #     file: build\${{ env.BUILD_TYPE }}\main.exe
+    #     asset_name: main-windows_amd64-python${{ matrix.python-version }}.exe
+    #     tag: latest
+    #     overwrite: true
+    #     prerelease: true
+    #     body: "${{ env.BUILD_TYPE }} for ${{ matrix.platform }}"
+
+    
+
+    # # and finally do an upload!
+    # - name: Upload release assets
+    #   uses: actions/upload-release-asset@v1
+    #   env:
+    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    #   with:
+    #     upload_url: ${{ needs.create_release.outputs.upload_url }}
+    #     # This is how it will be named on the release page. Put hatever name
+    #     # you like, remember that they need to be different for each platform.
+    #     # You can choose any build matrix parameters. For Rust I use the
+    #     # target triple.
+    #     asset_name: Mastotron-${{ matrix.os }}
+    #     # The path to the file you want to upload.
+    #     asset_path: ./dist/MastotronApp
+    #     # probably you will need to change it, but most likely you are
+    #     # uploading a binary file
+    #     asset_content_type: application/octet-stream
+
+
+
+    - uses: actions/upload-artifact@v2
+      with:
+        path: dist/*
