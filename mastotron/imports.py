@@ -1,5 +1,3 @@
-__version__ = '0.4.3'
-
 PORT=1789
 HOST='localhost'
 REL_IS_LOCAL_FOR='is_local_for'
