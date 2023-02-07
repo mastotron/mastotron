@@ -42,13 +42,13 @@ jobs:
 
     # ### SOURCE?
     # - name: Package source
-    #   if: ${{ matrix.platform == 'ubuntu-latest' }}
+    #   if: ${{ matrix.os == 'ubuntu-latest' }}
     #   run: python setup.py sdist
 
     
     ### WINDOWS?
     - name: Package Windows app Application
-      if: ${{ matrix.platform == 'ubuntu-latest' }}
+      if: ${{ matrix.os == 'ubuntu-latest' }}
       uses: JackMcKew/pyinstaller-action-windows@main
       with:
         path: ./
