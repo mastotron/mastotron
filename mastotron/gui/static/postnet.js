@@ -276,7 +276,7 @@ function clear_network() {
 }
 
 function add_context(node_id) {
-  console.log('getting context for:',node_id);
+  logmsg('getting context for '+node_id);
   socket.emit('add_context', node_id)
 }
 function add_full_context(node_id) {
@@ -766,7 +766,6 @@ function receive_updates_showing_latest_n(data) {
 
 
 // GOT UPDATE
-var ALREADY_UPDATED=false;
 socket.on('get_updates', function(data) {
   console.log(PAUSE,ALREADY_UPDATED,nodes.length);
   if(PAUSE & ALREADY_UPDATED & (!data.force_push)){
@@ -774,6 +773,7 @@ socket.on('get_updates', function(data) {
     // receive_updates_with_stack(data);
   } else {
     ALREADY_UPDATED=true;
+    stop_spinner();
     receive_updates_with_stack_pushed(data);
   }
 });
@@ -841,7 +841,15 @@ $(document).on('keydown', function (event) {
   } else if (event.which==78) { // n
     next_batch_of_nodes_please();
     // turnover_nodes(force=true);
+  } else if (event.which==80) { // p
+    toggle_playpause();
 
+  } else if (event.which==67) { // c
+    node_ids=network.getSelectedNodes()
+    if(node_ids){
+      node_id=node_ids[0];
+      add_context(node_id);
+    }
   }
   
 });
@@ -898,20 +906,24 @@ function repos_nodes(overwrite_x=false, overwrite_y=false) {
 };
 
 // start
+var INTERVALS = [];
+function clear_intervals(){ INTERVALS.forEach(clearInterval); }
+function set_intervals() {
+  clear_intervals();
+
+  i1 = setInterval(function() { request_pushes(); }, 100);
+  i2 = setInterval(function() { request_updates(); }, TIME_TIL_UPDATE * 1000);
+  i3 = setInterval(function() { request_updates(lim=0, force_push=true); }, 60 * 1000 * 5); // once every 5 mins a hard ref
+  INTERVALS.push(...[i1,i2,i3]);
+
+}
+
+
 $(document).ready(function(){
   reinforce_darkmode();
   startnet();
   $(document).tooltip();
-
-  // setInterval(function() { fix_nodes(); }, 10);  
-  // setInterval(function() { get_more_nodes(); }, 500);
-  setInterval(function() { request_pushes(); }, 100);
-  setInterval(function() { request_updates(); }, TIME_TIL_UPDATE * 1000);
-
-  setInterval(function() { request_updates(lim=0, force_push=true); }, 60 * 1000 * 5); // once every 5 mins a hard ref
-  
-  reinforce_darkmode();
-
+  set_intervals();
   window.onresize = function() {network.fit();}
 });
 

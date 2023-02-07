@@ -210,12 +210,13 @@ class Mastotron():
 
         with self.cache('timeline_minute') as cache:
             if force or not dkey in cache:
-                self.logmsg('requesting updates for period ...',dkey,end=' ',flush=True)
+                self.logmsg(f'requesting updates for period {dkey}')
                 api = self.api_user(account_name)
                 timeline = api.timeline(max_id=max_id, min_id=min_id, **timeline_opts)
                 # print('<<< got res',timeline)
                 posts=PostList(timeline)
-                if posts: print(f'{len(posts)} posts found',flush=True)
+                if posts: 
+                    self.logmsg(f'{len(posts)} posts found in {dkey}')
                 if save: cache[dkey] = [p._id for p in posts]
             else:
                 posts = PostList(cache[dkey])

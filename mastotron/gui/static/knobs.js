@@ -1,3 +1,5 @@
+var ALREADY_UPDATED=false;
+
 var PAUSE=false;
 var TIME_TIL_UPDATE = 2.5;
 var TIME_TIL_MOVED = 0.5;
@@ -24,6 +26,7 @@ msg=`
 <li>Hover over a node to read it.</li>
 <li>Right-click it to load replies.</li>
 <li>Press (D) to dismiss it.</li>
+<li>Press (C) to load its context/replies into the network.</li>
 <li>Press (R) to refresh data.</li>
 <li>Press (L) for latest in queue.</li>
 <li>Press (N) for next in queue.</li>
@@ -144,6 +147,7 @@ function set_speed_update(speed) {
     if(speed>0.1) {
       set_in_config('TIME_TIL_UPDATE', speed)
       TIME_TIL_UPDATE = speed;
+      set_intervals();
     }
   }
 }
@@ -175,12 +179,24 @@ function prompt_for_speed() {
 }
 
 
+function stop_spinner() {
+  $('#spinner').hide();
+}
+
+function set_spinner() {
+  $('#spinner').show();
+}
+
 
 
 $(document).ready(function(){  
   reinforce_darkmode();
-  set_playpause(get_in_config('pause'))
+  set_playpause(get_in_config('pause'));
+  if(!ALREADY_UPDATED){set_spinner();}
   // set_speed_update(get_in_config('TIME_TIL_UPDATE'));
 });
+
+
+
 
 

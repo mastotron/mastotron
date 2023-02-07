@@ -18,7 +18,7 @@ from flask_session import Session
 from flask_socketio import SocketIO, send, emit
 from mastodon import StreamListener
 import os,time,sys,random
-from engineio.async_drivers import eventlet
+# from engineio.async_drivers import eventlet
 # from engineio.async_drivers import threading
 
 import logging
@@ -49,7 +49,7 @@ def logmsg(*x,**y):
 def logsuccess(x): emitt('logsuccess',str(x))
 def logerror(x): emitt('logerror',str(x))
 
-def emitt(key,val,*vals,broadcast=True,**opts):
+def emitt(key,val,*vals,broadcast=False,**opts):
     emit(key,val,*vals,broadcast=broadcast,**opts)
 
 
@@ -86,6 +86,7 @@ app.config['SESSION_FILE_DIR'] = os.path.join(path_data, 'flask_session')
 Session(app)
 socketio = SocketIO(app, manage_session=False, async_handlers=False)
 # socketio = SocketIO(app, manage_session=False, async_mode="threading")
+# socketio = SocketIO(app, manage_session=False, async_mode="eventlet")
 
 
 @app.route("/")
@@ -108,7 +109,7 @@ def keepalive():
 def get_config(d={}):
     defaultd={
         'LIM_NODES_GRAPH':10,
-        'LIM_NODES_STACK':25,
+        'LIM_NODES_STACK':100,
         'DARKMODE':1,
         'VNUM':vnum,
     }
@@ -340,7 +341,7 @@ def mainview(**kwargs):
     view(**kwargs)
     main(**kwargs)
 
-def main(debug=True, **kwargs): 
+def main(debug=False, **kwargs): 
     pyperclip.copy(HOSTPORTURL)
     print(WELCOME_MSG)
     return socketio.run(

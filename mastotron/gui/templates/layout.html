@@ -58,6 +58,7 @@
       
     </div>
 
+    <div id='spinner'></div>
     {% block content %}
     {% endblock %}
     
@@ -71,18 +72,14 @@
     </a>
 
     <div id="helper">
-      Hover over a node to read it.<br/>
-      Right-click it to load replies.<br/>
-      Press (D) to dismiss it.<br/>
-      Press (R) to refresh data.<br/>
-      Press (L) for latest in queue.<br/>
-      Press (N) for next in queue.<br/>
-
-    <!-- (D) = dismiss<br/>
-    (N) = next<br/>
-    (L) = latest<br/>
-    (C) = clear<br/>
-    (R) = refresh<br/> -->
+      Hover to read.<br/>
+      (D) to dismiss.<br/>
+      (C) for context.<br/>
+      (R) to refresh.<br/>
+      (P) to pause.<br/>
+      (N) for next.<br/>
+      (L) for latest.<br/>
+    </div>
   </div>
 
     <div id="xaxis" class="axis">X-axis: Engagement ⟶</div>
@@ -90,5 +87,22 @@
 
 
 
+
+
+
+
+
+
+
+    <script type='module'>
+      import { Lines } from '/static/spinners.mjs'
+      const lines = new Lines({
+        target: document.getElementById('spinner'),
+        props: {
+          size: '10em',
+          colour: 'SlateGrey'
+        }
+      })
+    </script>
   </body>
 </html>
