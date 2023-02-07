@@ -51,9 +51,14 @@
             
       <li><a href="#" onclick="prompt_for_num_nodes()" title="Set number of posts shown">#</a></li>
 
+      <li><a id="playpause" href="#" onclick="toggle_playpause()" title="">▶</a></li>
+
+      
+      <li><a id="adjspeed" href="#" onclick="prompt_for_speed()" title="Adjust speed">⟤</a></li>
       
     </div>
 
+    <div id='spinner'></div>
     {% block content %}
     {% endblock %}
     
@@ -63,22 +68,18 @@
 
     
 <a href="https://github.com/quadrismegistus/mastotron" target="_blank">
-      <img id="oulo" title="mastotron {{config_d['VNUM']}}" src="/static/dalle2b-small.png"></img>
+      <img id="oulo" title="mastotron {{config_d['VNUM']}}" src="/static/dalle3-transp-small.png"></img>
     </a>
 
     <div id="helper">
-      <!-- Hover over nodes to read posts.<br/>
-      Press (D) to dismiss post.<br/>
-      Press (N) for next in queue.<br/>
-      Press (L) for latest.<br/>
-      Press (C) to clear screen.<br/>
-      Press (R) to refresh.<br/> -->
-
-    (D) = dismiss<br/>
-    (N) = next<br/>
-    (L) = latest<br/>
-    (C) = clear<br/>
-    (R) = refresh<br/>
+      Hover to read.<br/>
+      (D) to dismiss.<br/>
+      (C) for context.<br/>
+      (R) to refresh.<br/>
+      (P) to pause.<br/>
+      (N) for next.<br/>
+      (L) for latest.<br/>
+    </div>
   </div>
 
     <div id="xaxis" class="axis">X-axis: Engagement ⟶</div>
@@ -86,5 +87,22 @@
 
 
 
+
+
+
+
+
+
+
+    <script type='module'>
+      import { Lines } from '/static/spinners.mjs'
+      const lines = new Lines({
+        target: document.getElementById('spinner'),
+        props: {
+          size: '10em',
+          colour: 'SlateGrey'
+        }
+      })
+    </script>
   </body>
 </html>

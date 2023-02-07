@@ -31,7 +31,7 @@ STARTED=None
 new_urls = set()
 new_msgs = []
 
-@lru_cache
+# @lru_cache
 def Tron():
     obj = Mastotron()
     obj._logmsg = logmsg_tron
@@ -39,39 +39,60 @@ def Tron():
 
 def logmsg_tron(*x,**y):
     global new_msgs
-
     new_msgs.append(' '.join(str(xx) for xx in x))
-    print('>>>',new_msgs[-1])
+    # print('>>>',new_msgs[-1])
 
 def logmsg(*x,**y):
-    emit('logmsg',' '.join(str(xx) for xx in x))
+    emitt('logmsg',' '.join(str(xx) for xx in x))
     threading.Event().wait(0.1)
-def logsuccess(x): emit('logsuccess',str(x))
-def logerror(x): emit('logerror',str(x))
+def logsuccess(x): emitt('logsuccess',str(x))
+def logerror(x): emitt('logerror',str(x))
+
+def emitt(key,val,*vals,broadcast=False,**opts):
+    emit(key,val,*vals,broadcast=broadcast,**opts)
+
 
 #####
 HOSTPORTURL=f'http://{HOST}:{PORT}'
 
 LINE1=f'MASTOTRON {vnum}'
-LINE2=f'URL: {HOSTPORTURL}'
-LINE3='(Visit this URL in your browser. It is now copied to your clipboard.)'
-LOGO=r'''
-                           _               _                             
-  _ __    __ _     ___    | |_     ___    | |_      _ _    ___    _ _    
- | '  \  / _` |   (_-<    |  _|   / _ \   |  _|    | '_|  / _ \  | ' \   
- |_|_|_| \__,_|   /__/_   _\__|   \___/   _\__|   _|_|_   \___/  |_||_|  
-_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""| 
-"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-' 
+LINE2=f'{HOSTPORTURL}'
+LINE3='(Visit this URL in your browser.'
+LINE4='It is now copied to your clipboard.)'
+# LINE4='(To exit, hold Ctrl+C or close terminal window.)'
+LOGO=r'''                      _        _                   
+                     | |      | |                  
+  _ __ ___   __ _ ___| |_ ___ | |_ _ __ ___  _ __  
+ | '_ ` _ \ / _` / __| __/ _ \| __| '__/ _ \| '_ \ 
+ | | | | | | (_| \__ \ || (_) | |_| | | (_) | | | |
+ |_| |_| |_|\__,_|___/\__\___/ \__|_|  \___/|_| |_|
 '''
-lwid=max(len(lstr) for lstr in LOGO.split('\n'))
-WELCOME_MSG = f'''
-{LOGO.center(lwid)}
 
+ELE=r'''
+                 /eeeeeeeeeee\ 
+   /RRRRRRRRRR\ /eeeeeeeeeeeee\ /RRRRRRRRRR\ 
+  /RRRRRRRRRRRR\|eeeeeeeeeeeee|/RRRRRRRRRRRR\ 
+ /RRRRRRRRRRRRRR +++++++++++++ RRRRRRRRRRRRRR\ 
+|RRRRRRRRRRRRRR ############### RRRRRRRRRRRRRR| 
+|RRRRRRRRRRRRR ######### ####### RRRRRRRRRRRRR| 
+ \RRRRRRRRRRR ######### ######### RRRRRRRRRR/ 
+   |RRRRRRRRR ########## ######## RRRRRRRR| 
+  |RRRRRRRRRR ################### RRRRRRRRR| 
+               ######     ###### 
+               #####       ##### 
+               #nnn#       #nnn#
+'''
+
+
+lwid=max(len(lstr) for lstr in ELE.split('\n'))
+WELCOME_MSG = f'''
+{ELE.center(lwid)}
 {LINE1.center(lwid)}
 
 {LINE2.center(lwid)}
 
 {LINE3.center(lwid)}
+{LINE4.center(lwid)}
 '''
 
 
@@ -82,6 +103,7 @@ app.config['SESSION_FILE_DIR'] = os.path.join(path_data, 'flask_session')
 Session(app)
 socketio = SocketIO(app, manage_session=False, async_handlers=False)
 # socketio = SocketIO(app, manage_session=False, async_mode="threading")
+# socketio = SocketIO(app, manage_session=False, async_mode="eventlet")
 
 
 @app.route("/")
@@ -104,7 +126,7 @@ def keepalive():
 def get_config(d={}):
     defaultd={
         'LIM_NODES_GRAPH':10,
-        'LIM_NODES_STACK':25,
+        'LIM_NODES_STACK':100,
         'DARKMODE':1,
         'VNUM':vnum,
     }
@@ -114,11 +136,13 @@ def get_config(d={}):
 
 @socketio.event
 def req_config(d={}):
-    emit('res_config',get_config(d))
+    emitt('res_config',get_config(d))
 
 @socketio.event
-def set_config(d):
-    for k,v in d.items(): session[k]=v
+def set_config(k,v):
+    # print(f'setting config: {k} -> {v}')
+    # print(f'{k} in config now =',get_config().get(k))
+    session[k]=v
 
 @socketio.event
 def set_acct_name(data):
@@ -130,12 +154,12 @@ def set_acct_name(data):
             try:
                 url = tron.user_auth_url(acct)
                 logmsg('Please enter activation code')
-                emit('get_auth_url', {'acct':acct,'url':url} )
+                emitt('get_auth_url', {'acct':acct,'url':url} )
             except Exception as e:
                 un,server=parse_account_name(acct)
-                emit('server_not_giving_code', {'server':server, 'acct':acct})
+                emitt('server_not_giving_code', {'server':server, 'acct':acct})
     else:
-        emit('invalid_user_name', data)
+        emitt('invalid_user_name', data)
         
 
 @socketio.event
@@ -147,10 +171,10 @@ def do_login(data):
         tron.api_user(acct, code=code, direct_input=False)
         if tron.user_is_init(acct):
             logmsg(f'{acct} logged in')
-            emit('login_succeeded', dict(acct=acct))
+            emitt('login_succeeded', dict(acct=acct))
         else:
             logmsg(f'{acct} NOT logged in')
-            emit('login_failed', dict(acct=acct))
+            emitt('login_failed', dict(acct=acct))
 
 
 def get_acct_name(data={}): return session.get('acct')
@@ -197,7 +221,7 @@ def get_pushes(data={}):
             force_push=True
         )
 
-MAX_UPDATE=5
+MAX_UPDATE=10
 
 @socketio.event
 def get_updates(data={}):
@@ -207,23 +231,30 @@ def get_updates(data={}):
     SEEN|=set(data.get('ids_now',[]))
     lim = data.get('lim') if data.get('lim') else get_config().get('LIM_NODES_STACK')
     force_push = data.get('force_push',False)
+    only_latest = data.get('only_latest',False)
+    max_mins = data.get('max_mins',60*24)
+    unread_only=data.get('unread_only',True)
 
     lim=lim if lim<MAX_UPDATE else MAX_UPDATE
-    iterr=Tron().timeline_iter(
+    # iterr=Tron().timeline_iter(
+    tl=Tron().timeline(
         acct, 
-        unread_only=data.get('unread_only',True),
+        unread_only=unread_only,
         seen=SEEN,
-        max_mins=60*24,
-        lim=lim
+        max_mins=max_mins,
+        lim=lim,
+        only_latest=only_latest
     )
-    for i,post in enumerate(iterr):
-        if i>=lim: break
-        update_posts(
-            [post], 
-            ids_done=SEEN, 
-            force_push=force_push
-        )
-        SEEN|={p._id for p in post.allcopies}
+    update_posts(tl, ids_done=SEEN, force_push=force_push)
+    SEEN|={p._id for post in tl for p in post.allcopies}
+    # for i,post in enumerate(iterr):
+    #     if i>=lim: break
+    #     update_posts(
+    #         [post],
+    #         ids_done=SEEN, 
+    #         force_push=force_push
+    #     )
+    #     SEEN|={p._id for p in post.allcopies}
 
 
 
@@ -248,7 +279,7 @@ def update_posts(tl, omsg='refreshed', emit_key='get_updates',ids_done=None,unre
         if nodes or edges:
             odata = dict(nodes=nodes, edges=edges, logmsg=omsg, force_push=force_push)
             # for n in nodes: print('++',n['id'])
-            emit(emit_key, odata)
+            emitt(emit_key, odata)
             # time.sleep(0.1)
             threading.Event().wait(.1)
             return True
@@ -316,7 +347,7 @@ class OpenBrowser(Thread):
 
 def send_update(nodes=[], edges=[]):
     odata=dict(nodes=nodes, edges=edges)
-    emit('get_updates', odata)
+    emitt('get_updates', odata)
     return odata
 
 
@@ -330,12 +361,16 @@ def mainview(**kwargs):
 def main(debug=False, **kwargs): 
     pyperclip.copy(HOSTPORTURL)
     print(WELCOME_MSG)
-    return socketio.run(
-        app, 
-        debug=debug, 
-        # allow_unsafe_werkzeug=True,
-        port=PORT,
-        host=HOST
-    )
+    try:
+        return socketio.run(
+            app, 
+            debug=debug, 
+            # allow_unsafe_werkzeug=True,
+            port=PORT,
+            host=HOST
+        )
+    except (KeyboardInterrupt,EOFError):
+        print('goodbye')
+        exit()
 
 if __name__=='__main__': mainview(debug=False)

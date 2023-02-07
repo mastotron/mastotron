@@ -1,6 +1,6 @@
 // vars
-var TIME_TIL_UPDATE = 3000;
-var TIME_TIL_MOVED = 1000;
+
+
 var BUSY=false;
 var FIXED = {x:false,y:false}
 var MODE = 'default';
@@ -55,9 +55,9 @@ var options = {
       }
     },
     smooth: {
-      enabled: false,
-      type: "dynamic",
-      roundness: .1
+      enabled: true,
+      type: "cubicBezier",
+      roundness: .5
     },
   },
 
@@ -151,7 +151,7 @@ var network = new vis.Network(container, data, options);
 function startnet() {
   console.log('starting network!');
   socket.emit('start_updates');
-  request_updates(lim=3);//lim=get_lim_nodes_graph());
+  request_updates(lim=get_lim_nodes_graph());
 }
 
 function iter_edges() { return Object.values(network.body.edges); }
@@ -276,7 +276,7 @@ function clear_network() {
 }
 
 function add_context(node_id) {
-  console.log('getting context for:',node_id);
+  logmsg('getting context for '+node_id);
   socket.emit('add_context', node_id)
 }
 function add_full_context(node_id) {
@@ -334,6 +334,10 @@ function update_nodes(data) {
   // unfreeze_nodes();
   style_edges();
   // lim_nodes();
+  
+  setTimeout(function(){
+    logmsg('currently '+nodes.length.toString()+' posts visible and '+DATA_STACK.length.toString()+' in queue');
+  }, 100);
 }
 
 function sleep(ms) {
@@ -535,11 +539,10 @@ function size_nodes_score(max_size=40, min_size=20, score_type=SCORE_TYPE) {
 
 function set_dark_mode() {
   DARKMODE = 1;
-  $('#oulo').attr('src',darkbgimg);
-  $('#oulo').attr('opacity',0.5);
+  // $('#oulo').attr('src',darkbgimg);
   $('body').css('background-color', darkbgcolor);
   // $('body').css('background-image', 'url("'+darkbgimg+'")');
-  $('#optbuttons a').css('color',darkaccent);
+  // $('#optbuttons a').css('color',darkaccent);
   $('body').css('color', darktxtcolor);
   $('#tweet').css('background-color', darktweetbg);
   $('#pb-container').css('background-color', darktweetbg);
@@ -548,13 +551,12 @@ function set_dark_mode() {
   $('input').css('color', darktxtcolor);
   $('#nightmode').attr('src',darkimg);
   change_node_color(darktxtcolor);
-  socket.emit('set_darkmode', DARKMODE);
+  // set_dark_mode_opt(DARKMODE);
 }
 
 function set_light_mode() {
 DARKMODE = 0;
-$('#oulo').attr('src',lightbgimg);
-$('#oulo').css('opacity',0.9);
+// $('#oulo').attr('src',lightbgimg);
 $('body').css('background-color', lightbgcolor);
 // $('body').css('background-image', 'url("'+lightbgimg+'")');
 $('body').css('color', lighttxtcolor);
@@ -563,9 +565,9 @@ $('#tweet').css('border', '1px solid lightgray');
 $('input').css('background-color', lightbgcolor);
 $('input').css('color', lighttxtcolor);
 $('#nightmode').attr('src',lightimg);
-$('#optbuttons a').css('color',lightaccent);
+// $('#optbuttons a').css('color',lightaccent);
 change_node_color(lighttxtcolor);
-socket.emit('set_darkmode', DARKMODE);
+// set_dark_mode_opt(DARKMODE);
 }
 
 // var currentMousePos = { x: -1, y: -1 };
@@ -658,7 +660,7 @@ function get_our_status_for_updates(lim=0,force_push=false) {
 function next_batch_of_nodes_please() {
   clear_network();
   get_more_nodes();
-  request_updates(lim=0);
+  // request_updates(lim=0);
 }
 
 function request_updates(lim=1, force_push=false) {
@@ -678,12 +680,22 @@ function request_updates(lim=1, force_push=false) {
     logmsg('idling with '+ns+' posts in queue @ '+get_time_str());
     turnover_nodes();
   }
-  get_more_nodes();
+  // get_more_nodes();
 }
 
-function turnover_nodes() {
+function turnover_nodes(force=false) {
+  if(PAUSE & !force){return;}
   // sort_stack();
   res = DATA_STACK.shift();
+  if(res) {
+    update_nodes(res);
+    lim_nodes();
+  }
+}
+
+function turnover_nodes_rev() {
+  // sort_stack();
+  res = DATA_STACK.pop();
   if(res) {
     update_nodes(res);
     lim_nodes();
@@ -752,18 +764,18 @@ function receive_updates_showing_latest_n(data) {
   }
 }
 
+
+// GOT UPDATE
 socket.on('get_updates', function(data) {
-  var BUSY = false;
-  // console.log('BUSY',BUSY);
-  // console.log('got updates:',data);
-  receive_updates_with_stack_pushed(data);
-  // receive_updates_showing_latest_n(data);
-  // repos_nodes();
-  // if(nodes.length < get_lim_nodes_graph()) {
-  //   request_updates();
-  // } else {
-  // setTimeout(request_updates, TIME_TIL_UPDATE);
-  // }
+  console.log(PAUSE,ALREADY_UPDATED,nodes.length);
+  if(PAUSE & ALREADY_UPDATED & (!data.force_push)){
+    maybe_add_to_stack(data);
+    // receive_updates_with_stack(data);
+  } else {
+    ALREADY_UPDATED=true;
+    stop_spinner();
+    receive_updates_with_stack_pushed(data);
+  }
 });
 
 function maybe_add_to_stack(data) {
@@ -779,13 +791,18 @@ function sort_stack() {
 }
 
 function get_more_nodes() {
-  
-  while ((DATA_STACK.length > 0) && (nodes.length < get_lim_nodes_graph())) {
+  newdata={nodes:[], edges:[]};
+  var i=0;
+  while ((DATA_STACK.length > 0) && ((nodes.length+newdata.nodes.length) < get_lim_nodes_graph())) {
     data = DATA_STACK.pop()
-    if(data) {
-      update_nodes(data);
-    }
+    newdata.nodes.push(...data.nodes);
+    newdata.edges.push(...data.edges);
+    i=i+1;
   }
+  // pause=PAUSE;
+  // set_playpause(true);
+  if(i>0) { update_nodes(newdata); }
+  // set_playpause(pause);
 }
 
 socket.on('logmsg', function(msg) {if(msg){logmsg(msg)};});
@@ -796,7 +813,6 @@ socket.on('logmsg', function(msg) {if(msg){logmsg(msg)};});
 $(document).on('keydown', function (event) {
   // console.log('event.which =',event.which);
   if (event.which==27) {   // escape
-    set_mode_default();
     network.unselectAll();
     hide_status_div();
         
@@ -810,24 +826,30 @@ $(document).on('keydown', function (event) {
     } 
 
   } else if (event.which==82) {  // r
-    request_updates();
+    request_updates(lim=3, force_push=true);
   
   } else if (event.which==68) {  // d
     network.getSelectedNodes().forEach(del_node);
 
-  } else if (event.which==78) {  // n
-    turnover_nodes();
-
   } else if (event.which==76) {  // l
     sort_stack();
-    turnover_nodes();
+    turnover_nodes(force=true);
     
   } else if (event.which==77) { // m
     network.getSelectedNodes().forEach(add_context);
 
-  } else if (event.which==67) { // c
+  } else if (event.which==78) { // n
     next_batch_of_nodes_please();
+    // turnover_nodes(force=true);
+  } else if (event.which==80) { // p
+    toggle_playpause();
 
+  } else if (event.which==67) { // c
+    node_ids=network.getSelectedNodes()
+    if(node_ids){
+      node_id=node_ids[0];
+      add_context(node_id);
+    }
   }
   
 });
@@ -852,10 +874,10 @@ function repos_nodes(overwrite_x=false, overwrite_y=false) {
   var max_h = (height/2) - 50;
 
   nodes.forEach(function(nd) {
-    // ndx=smudge(rankBetween(nd.score, scores, -1*max_w, max_w), 20);
-    // ndy=smudge(rankBetween(-1*nd.timestamp, times_inv, -1*max_h, max_h), 20)
-    ndx=smudge(rankBetween(-1*nd.timestamp, times_inv, -1*max_w, max_w), 20);
-    ndy=smudge(rankBetween(nd.score, scores, -1*max_h, max_h), 20)
+    ndx=smudge(rankBetween(nd.score, scores, -1*max_w, max_w), 20);
+    ndy=smudge(rankBetween(-1*nd.timestamp, times_inv, -1*max_h, max_h), 20)
+    // ndx=smudge(rankBetween(-1*nd.timestamp, times_inv, -1*max_w, max_w), 20);
+    // ndy=smudge(rankBetween(nd.score, scores, -1*max_h, max_h), 20)
 
     // ndx=scaleBetween2(nd.score, scores, -1*max_w, max_w);
     // ndy=scaleBetween2(-1*nd.timestamp, times_inv, -1*max_h, max_h);
@@ -866,7 +888,7 @@ function repos_nodes(overwrite_x=false, overwrite_y=false) {
     // if(nd.y==undefined){nd.y=0;}
     // nodes.update(nd);
     // nd.x=ndx; nd.y=ndy; nodes.update(nd);
-    moveNodeAnim(nd.id,ndx,ndy,TIME_TIL_MOVED);
+    moveNodeAnim(nd.id,ndx,ndy,TIME_TIL_MOVED * 1000);
 
     // nodes.update(nd);
     // if(nodes.length < get_lim_nodes_graph()) {
@@ -883,20 +905,25 @@ function repos_nodes(overwrite_x=false, overwrite_y=false) {
     
 };
 
-
 // start
-$(document).ready(function(){  
+var INTERVALS = [];
+function clear_intervals(){ INTERVALS.forEach(clearInterval); }
+function set_intervals() {
+  clear_intervals();
+
+  i1 = setInterval(function() { request_pushes(); }, 100);
+  i2 = setInterval(function() { request_updates(); }, TIME_TIL_UPDATE * 1000);
+  i3 = setInterval(function() { request_updates(lim=0, force_push=true); }, 60 * 1000 * 5); // once every 5 mins a hard ref
+  INTERVALS.push(...[i1,i2,i3]);
+
+}
+
+
+$(document).ready(function(){
   reinforce_darkmode();
   startnet();
   $(document).tooltip();
-
-  // setInterval(function() { fix_nodes(); }, 10);  
-  // setInterval(function() { get_more_nodes(); }, 500);
-  setInterval(function() { request_pushes(); }, 100);
-  setInterval(function() { request_updates(); },TIME_TIL_UPDATE);
-  
-  reinforce_darkmode();
-
+  set_intervals();
   window.onresize = function() {network.fit();}
 });
 
