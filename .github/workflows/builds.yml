@@ -22,6 +22,24 @@ jobs:
     #- run: ./dist/MastotronApp
     - run: python setup.py sdist
     
-    - uses: actions/upload-artifact@v2
+    # - uses: actions/upload-artifact@v2
+    #   with:
+    #     path: dist/*
+
+    # and finally do an upload!
+    - name: Upload release assets
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        path: dist/*
+        upload_url: ${{ needs.create_release.outputs.upload_url }}
+        # This is how it will be named on the release page. Put hatever name
+        # you like, remember that they need to be different for each platform.
+        # You can choose any build matrix parameters. For Rust I use the
+        # target triple.
+        asset_name: Mastotron-${{ matrix.config.os }}
+        # The path to the file you want to upload.
+        asset_path: ./dist/MastotronApp
+        # probably you will need to change it, but most likely you are
+        # uploading a binary file
+        asset_content_type: application/octet-stream
