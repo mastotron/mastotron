@@ -14,3 +14,4 @@ human_readable
 gevent
 gevent-websocket
 pyperclip
+tqdm

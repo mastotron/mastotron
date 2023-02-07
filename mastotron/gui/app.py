@@ -56,9 +56,9 @@ def emitt(key,val,*vals,broadcast=False,**opts):
 HOSTPORTURL=f'http://{HOST}:{PORT}'
 
 LINE1=f'MASTOTRON {vnum}'
-LINE2=f'{HOSTPORTURL}'
+LINE2=f'URL: {HOSTPORTURL}'
 LINE3='(Visit this URL in your browser.'
-LINE4='It is now copied to your clipboard.)'
+LINE4='It\'s been copied to your clipboard.)'
 # LINE4='(To exit, hold Ctrl+C or close terminal window.)'
 LOGO=r'''                      _        _                   
                      | |      | |                  
