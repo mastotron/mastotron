@@ -1,0 +1,30 @@
+/* ============================================================================== */
+/* = jQUERY FLASH PLUGIN CSS                                                    = */
+/* ============================================================================== */
+#flash{
+    cursor:pointer;
+    z-index:5500;
+    position:fixed;
+    top:0px;
+    left:0px;
+    background-color: rgba(0, 0, 0, 0);
+    color:gray;
+    width:250px;
+    padding:25px 20px;
+    margin:0;
+    font-size:1em;
+    text-align:center;
+    border:none;
+    filter:alpha(opacity=280);
+    -moz-opacity:0.8;
+    -khtml-opacity:0.8;
+    opacity:0.8;
+    border-radius:40px 40px 0 0;
+    -moz-border-radius:40px 40px 0 0;
+    -webkit-border-top-left-radius:40px;
+    -webkit-border-top-right-radius:40px;
+}
+
+#flash div.flash_close{top:-6px;right:-6px;position:absolute;height:30px;width:30px;background:url('close.png') top left no-repeat;cursor:pointer;z-index:181;}
+
+

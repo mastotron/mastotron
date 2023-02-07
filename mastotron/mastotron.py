@@ -1,568 +1,325 @@
-import os,sys; sys.path.insert(0,'..')
-import numpy as np
-from mastodon import Mastodon, AttribAccessDict
-from datetime import datetime, timedelta, timezone
-from scipy.stats import gmean
-from math import sqrt
-from pprint import pprint
-import pandas as pd
-from IPython.display import Markdown, display
-def printm(x): display(Markdown(x))
-import webbrowser,json, re
-from collections import UserDict
-def unhtml(x): 
-    x = x.replace('<br>','\n')
-    return re.sub(r'<.*?>', '', x).strip()
-import networkx as nx
-import pandas as pd
-import warnings
-warnings.filterwarnings('ignore')
+from .imports import *
 
+DEFAULT_SCOPE=['read']
+NUM_GOT_CONTEXTS=0
+NUM_GOT_STATUS=0
 
-path_data = os.path.expanduser('~/.mastotron')
-path_env = os.path.join(path_data, 'config.json')
-app_name = 'mastotron'
+@lru_cache()
+def Tron():
+    # print('creating Tron object')
+    return Mastotron()
 
-API = None
-def get_api():
-    global API
-    return API
-
-def set_api(mastotron_obj):
-    global API
-    API = mastotron_obj
+CACHES = {}
+APIS = {}
 
 class Mastotron():
-    def __init__(self, account_name):
-        
-        # get un and server from acct name
-        self.username, self.servername = parse_account_name(account_name)
+    def __init__(self):
+        global CACHES, API_SERVERS
 
-        if not self.username or not self.servername:
-            raise Exception('! Invalid account name !')
+        self._api = APIS
+        self._posts = {}
+        self._seen_urls = set()
+        self._caches = CACHES
+        self._logmsg = print
 
-        set_api(self)
-
-    @property
-    def acct(self):
-        return self.username+'@'+self.servername
-    @property
-    def acct_safe(self):
-        return self.username+'__at__'+self.servername
+    def logmsg(self,*x,**y):
+        return self._logmsg(*x,**y)
     
-
-    @property
-    def server(self):
-        return f'https://{self.servername}'
-
-    @property
-    def path_client_secret(self):
+    def _get_path_api_auth(self, server):
         return os.path.join(
-            path_data,
-            self.acct,
-            f'clientcred.secret'
+            path_data, 
+            'mastodon_clients',
+            get_server_name(server)+'.secret'
         )
-
-    @property
-    def path_user_secret(self):
+    def _get_path_user(self, account_name):
+        un,server = parse_account_name(account_name)
         return os.path.join(
             path_data,
-            self.acct,
+            f'{un}@{server}'
+        )
+        
+    def _get_path_user_auth(self, account_name):
+        return os.path.join(
+            self._get_path_user(account_name),
             f'usercred.secret'
         )
 
-    @property
-    def api(self):
-        if not hasattr(self,'_api'):
-            # make sure app token exists
-            self.init_app()
+    def api(self, server_or_account):
+        return self.api_server(server_or_account) if not '@' in server_or_account else self.api_user(server_or_account)
 
-            # make sure user token exists
-            self.init_user()
+    def api_server(self, server):
+        server = get_server_name(server)
+        path_client_secret = self._get_path_api_auth(server)
 
-            # log in and set app
-            self._api = Mastodon(access_token = self.path_user_secret)
-
-        return self._api
-
-    def init_app(self):
-        if not os.path.exists(self.path_client_secret):
-            if not os.path.exists(os.path.dirname(self.path_client_secret)):
-                os.makedirs(os.path.dirname(self.path_client_secret))
+        if not server in self._api:
+            odir=os.path.dirname(path_client_secret)
+            if not os.path.exists(odir): os.makedirs(odir)
+            
             Mastodon.create_app(
-                app_name,
-                api_base_url = self.server,
-                to_file = self.path_client_secret
+                f'mastotron_{server.replace(".","")}',
+                api_base_url = f'https://{server}/',
+                to_file = path_client_secret
             )
 
-    def init_user(self):
-        if not os.path.exists(self.path_user_secret):
-            if not os.path.exists(os.path.dirname(self.path_user_secret)):
-                os.makedirs(os.path.dirname(self.path_user_secret))
+            self._api[server] = Mastodon(client_id = path_client_secret)
+        return self._api[server]
+
+    
+    def user_is_init(self, account_name):
+        path_user_secret = self._get_path_user_auth(account_name)
+        return os.path.exists(path_user_secret)
+
+    def user_auth_url(self, account_name, scopes=DEFAULT_SCOPE):
+        un,server = parse_account_name(account_name)
+        api = self.api(server)
+        return api.auth_request_url(scopes=scopes)
+
+    def api_user(self, account_name, code=None, direct_input=False, scopes=DEFAULT_SCOPE):
+        un,server = parse_account_name(account_name)
+        path_user_secret = self._get_path_user_auth(account_name)
+        if not os.path.exists(path_user_secret):
+            odir = os.path.dirname(path_user_secret)
+            if not os.path.exists(odir): os.makedirs(odir)
             
-            if not os.path.exists(self.path_client_secret):
-                self.init_app()
-
-            api = Mastodon(client_id = self.path_client_secret)
-            url=api.auth_request_url()
-            webbrowser.open(url)
-            code = input('Paste the code from the browser:\n')
-            api.log_in(code = code, to_file = self.path_user_secret)
-
-    def iter_timeline(self, max_posts=20, hours_ago=24*7, timeline_type='home'):
-        # init vars
-        total_posts_seen = 0
-        filters = self.api.filters()
-        seen_post_urls = set()
-
-        # Set our start query
-        start = datetime.now(timezone.utc) - timedelta(hours=hours_ago)
-        # get initial response
-        timeline = self.api.timeline(timeline=timeline_type, min_id=start)
-        # get filters
-        while timeline and total_posts_seen < max_posts:
-            if filters: 
-                timeline = self.api.filters_apply(timeline, filters, "home")
-            for post in timeline:
-                total_posts_seen += 1
-
-                if post.url not in seen_post_urls:
-                    seen_post_urls.add(post.url)
-
-                    yield Post(post, _tron=self)
-
-            # keep going
-            timeline = self.api.fetch_previous(timeline)
-
-    def latest_post(self, **kwargs):
-        iterr=self.iter_timeline(**kwargs)
-        return next(iterr)
-
-    def latest_posts(self, max_posts=20, **kwargs):
-        iterr=self.iter_timeline(
-            max_posts=max_posts, 
-            **kwargs
-        )
-        return PostList(iterr)
-
-    def timeline(self, **kwargs):
-        return PostList(self.iter_timeline(**kwargs))
-
-    def get_post(self, id):
-        return Post(self.api.status(id), _tron=self)
-    
-
-
-class Post(AttribAccessDict):
-
-    def __init__(self,*args,id=None,_tron=None,**kwargs):
-        ## init self
-        self._tron = (get_api() if not _tron else _tron)
-
-        if id is not None:
-            if not kwargs:
-                kwargs = self._tron.api.status(id)
-            else:
-                kwargs['id'] = id
+            api = self.api(server)
         
-        ## pass into dict init
-        super().__init__(*args, **kwargs)
-        
-
-        
-        
-    @property
-    def in_boost_of(self):
-        if not hasattr(self,'_post_reposted'):
-            self._post_reposted = Post(self['reblog'], _tron=self._tron) if self['reblog'] else None
-        return self._post_reposted
-
-    
-    @property
-    def in_reply_to(self):
-        if not hasattr(self,'_post_repliedto'):
-            self._post_repliedto = Post(id=self['in_reply_to_id'], _tron=self._tron) if self['in_reply_to_id'] else None
-        return self._post_repliedto
-        
-                
-
-    def __repr__(self): return f'Post({self.id})'
-    def _repr_html_(self, allow_embedded = True): 
-        if self.is_boost:
-            o = f'''
-                <div class="post reblog">
-                    <p>
-                        {self.author._repr_html_()} reposted at {self.created_at.strftime("%m/%d/%Y at %H:%M:%S")}:
-                    </p>
-                    
-                    {self.in_boost_of._repr_html_()}
-                    <p>Post ID: <a href="{self.url_local}" target="_blank">{self.id}</a></p>
-
-                </div>
-            '''
+            if not code:
+                url=api.auth_request_url(scopes=scopes)
+                if not direct_input:
+                    return url
+                else:
+                    webbrowser.open(url)
+                    code = input('Paste the code from the browser:\n')
+            
+            api.log_in(code = code, to_file = path_user_secret, scopes=DEFAULT_SCOPE)
+            return api
         else:
-            imgs_urls = [d.get('preview_url') for d in self.media_attachments]
-            imgs = [
-                f'<a href="{url}" target="_blank"><img src="{url}" /></a>'
-                for url in imgs_urls
-                if url
-            ]
+            return Mastodon(access_token = path_user_secret)
+    
+    @cached_property
+    def db(self): 
+        return TinyDB(path_tinydb)
+    
+    def cache(self, dbname='cachedb'):
+        return SqliteDict(path_db+'.'+dbname, autocommit=True)
+    
+    def status(self, url_or_uri, **post_d):
+        global NUM_GOT_STATUS
 
-            o = f'''
-                <div class="post origpost">
-                    <p>
-                        {self.author._repr_html_()} posted on {self.created_at.strftime("%m/%d/%Y at %H:%M:%S")}:
-                    </p>
-                    
-                    {self.content}
+        res = {}
+        url = url_or_uri
+        if url:
+            with self.cache('status') as cache:
+                if post_d:
+                    cache[url]={**cache.get(url,{}), **post_d}
+                    res = cache[url]
+                elif url in cache:
+                    res = cache[url]
+                else:
+                    NUM_GOT_STATUS+=1
+                    # if NUM_GOT_STATUS>1: STOPXX
 
-                    <center>{"    ".join(imgs)}</center>
-                    
-                    <p>
-                        {self.replies_count:,} 🗣
-                        |
-                        {self.reblogs_count:,} 🔁
-                        |
-                        {self.favourites_count:,} 💙
-                        |
-                        Post ID: <a href="{self.url_local}" target="_blank">{self.id}</a>
-                    </p>
+                    try:
+                        server_name = get_server_name(url)
+                        status_id = get_status_id(url)
+                        api = self.api_server(server_name)
 
-                    {"<p><i>... in reply to:</i></p> " + self.in_reply_to._repr_html_() + " <br/> " if allow_embedded and self.is_reply else ""}
-                </div>
-            '''
+                        # print(f'getting {server_name}\'s {status_id} from API')
+                        res = api.status(status_id)
+                        log.debug(f'got {url} from API')
+                        cache[url] = res
+                    except Exception as e:
+                        # log.error(f'!! {e}: {url} !!')
+                        pass
+        return res
+        
+    def post(self, url_or_uri, **post_d):
+        if not url_or_uri: return
+        if not url_or_uri in self._posts:
+            self._posts[url_or_uri] = PostModel({
+                **self.status(url_or_uri, **post_d),
+                **{'_id':url_or_uri}
+            })
+        return self._posts[url_or_uri]
             
-        return '\n'.join([ln.lstrip() for ln in o.split('\n')]).strip()
 
-    @property
-    def author(self):
-        return Poster(self.get('account',{}))
+    def status_context(self, uri, **status_d):
+        global NUM_GOT_CONTEXTS
+        # with self.cache('context') as cache:
+        cache = self.cache('context')
+        if status_d:
+            # cache[uri] = {**cache.get(uri,{}), **status_d}
+            cache[uri] = status_d
+        else:
+            if not uri in cache:
+                server,uname,status_id = get_server_account_status_id(uri)
+                # print(server,uname,status_id)
+                NUM_GOT_CONTEXTS+=1
+                # if NUM_GOT_CONTEXTS>1: STOPXXX
+                try:
+                    # print(f'getting {server}\'s CONTEXT {status_id} from API')
+                    statd=self.api_server(server).status_context(status_id)
+                    cache[uri] = statd
+
+                    post = Post(uri)
+                    l_pre=[Post(**d) for d in statd.get('ancestors',[])]
+                    l_post=[Post(**d) for d in statd.get('descendants',[])]
+                    # print('post:',post)
+                    # pprint(l_pre)
+                    # pprint(l_post)
+                    
+                    if l_pre:
+                        l_preself=l_pre+[post]
+                        for i in range(len(l_preself)-1):
+                            a=l_preself[i]
+                            b=l_preself[i+1]
+                            if b.is_reply and not b.out(REL_IS_REPLY_TO):
+                                # print(f'{a} --> {b} ???')
+                                b.relate(a,REL_IS_REPLY_TO)
+                    
+                    if l_post:
+                        a=post
+                        for b in l_post:
+                            if b.is_reply and not b.out(REL_IS_REPLY_TO):
+                                # print(f'{a} --> {b} ???')
+                                b.relate(a,REL_IS_REPLY_TO)
+                    
+                except Exception as e:
+                    # log.error(e)
+                    # print(f'!! {e} !!')
+                    return {}
+        return cache[uri]
 
     
-    @property
-    def num_reblogs(self):
-        if self.is_boost: return self.in_boost_of.num_reblogs
-        return self.reblogs_count
-    
-    @property
-    def num_likes(self):
-        if self.is_boost: return self.in_boost_of.num_likes
-        return self.favourites_count
-    
-    @property
-    def num_replies(self):
-        if self.is_boost: return self.in_boost_of.num_replies
-        return self.replies_count
-
-    @property
-    def is_boost(self):
-        return self.reblog is not None
-    @property
-    def is_reply(self):
-        return self.in_reply_to_id is not None
-
-
-    def scores(self):
-        """
-        These scoring ideas come from mastodon_digest (https://github.com/hodgesmr/mastodon_digest).
-        """
-        if not hasattr(self,'_scores'):
-            scores={}
-
-            # simple score
-            scores['Simple'] = gmean([
-                self.num_reblogs+1, 
-                self.num_likes+1,
-            ])
-
-            # extended simple score
-            scores['ExtendedSimple'] = gmean([
-                self.num_reblogs+1, 
-                self.num_likes+1,
-                self.num_replies+1
-            ])
-
-            # add weighted versions
-            for score_name in list(scores.keys()):
-                scores[score_name+'Weighted'] = scores[score_name] / sqrt(self.author.num_followers+1)
-
-            scores['All'] = gmean(list(scores.values()))
-            self._scores = scores
-        return self._scores
-
-    def score(self, score_type='All'):
-        return self.scores().get(score_type,np.nan)
-
-    @property
-    def text(self):
-        return unhtml(self.content).strip()
-
-    @property
-    def label(self, limsize=40):
-        stext = self.spoiler_text
-        if not stext: stext=' '.join(w for w in self.text.split() if w and w[0]!='@')
-        return stext[:limsize]
-
-    @property
-    def url_local(self):
-        return '/'.join([
-            self._tron.server,
-            '@'+self.author.acct,
-            str(self.id),
-        ])
-
-
-
-class Poster(AttribAccessDict):
-    def __hash__(self):
-        return hash(self.acct)
-    
-    def __eq__(self, other):
-        return self.acct == other.acct
-
-    def __repr__(self):
-        return f'Poster({self.acct})'
-
-    def _repr_html_(self, **kwargs):
-        return f'<div class="author"><img src="{self.avatar}" /> <a href="{self.url}" target="_blank">{self.display_name}</a> ({self.followers_count:,} 👥)</div>'
-
-    @property
-    def num_followers(self):
-        return self.followers_count
-
-    @property
-    def num_following(self):
-        return self.following_count
-
-    @property
-    def url_local(self):
-        return os.path.join(
-            self._tron.server,
-            self.author.acct
-        )
-
-
-
-
-
-from collections import UserList
-
-class PostList(UserList):
-    def __init__(self, l):
-        super().__init__(l)
-    
-    def sort_chron(self):
-        self.sort(key=lambda post: post.created_at, reverse=True)
-
-    def sort_score(self, score_type='All'):
-        self.sort(key=lambda post: post.score(score_type), reverse=True)
-    
-    def network(self):
-        return PostNet(self)
-
-    @property
-    def posters(self):
-        return {post.author for post in self}
-
-
-
-
-class PostNet:
-    def __init__(self, posts):
-        self.posts = (
-            PostList(posts)
-            if type(posts)!=PostList
-            else posts
-        )
-
-    def graph(self):
-        # start graph
-        G=nx.DiGraph()
-        # funcs
-        node2int = {}
-        int2node = {}
-        def ensure_post_node(post):
-            post_name = str(post)
-            post_id = node2int.get(post_name)
-            if post_id is None: post_id = G.order()+1
-
-            if not G.has_node(post_id):    
-                node2int[post_name]=post_id
-                G.add_node(
-                    post_id,
-                    name=post_name,
-                    node_type='post',
-                    label=post.text[:50],
-                    text=post.text,
-                    obj=post
-                )
-            return post_id
-
-        def ensure_user_node(user):
-            user_name = str(user)
-            user_id = node2int.get(user_name)
-            if user_id is None: user_id = G.order()+1
-            if not G.has_node(user_id):
-                node2int[user_name]=user_id
-
-                G.add_node(
-                    user_id,
-                    name=user_name,
-                    node_type='user',
-                    label = user.display_name,
-                    text = user.display_name,
-                    obj = user
-                )
-            return user_id
+    # @lru_cache
+    def timeline_minute(
+            self,
+            account_name='',
+            timestamp=None,
+            dtobj=None,
+            force=False,
+            minute_blur=BLUR_MINUTES,
+            save = True,
+            **timeline_opts):
         
-        def add_user_post(post):
-            user = post.author
-            uid=ensure_user_node(user)
+        dkey,min_id,max_id = dtimekey(
+            dtobj=dtobj,
+            timestamp=timestamp,
+            minute_blur=minute_blur
+        )
 
-            if post.is_boost:
-                uid2=ensure_user_node(post.in_boost_of.author)
-                pid=ensure_post_node(post.in_boost_of)
-                if not G.has_edge(uid,uid2): G.add_edge(uid,uid2)
-                if not G.has_edge(uid2,pid): G.add_edge(uid2,pid)
+        with self.cache('timeline_minute') as cache:
+            if force or not dkey in cache:
+                self.logmsg(f'requesting updates for period {dkey}')
+                api = self.api_user(account_name)
+                timeline = api.timeline(max_id=max_id, min_id=min_id, **timeline_opts)
+                # print('<<< got res',timeline)
+                posts=PostList(timeline)
+                if posts: 
+                    self.logmsg(f'{len(posts)} posts found in {dkey}')
+                if save: cache[dkey] = [p._id for p in posts]
             else:
-                pid=ensure_post_node(post)
-                if not G.has_edge(uid,pid): G.add_edge(uid,pid)
+                posts = PostList(cache[dkey])
 
-            add_replies(post)
-            return pid
+            return posts
 
-        def add_replies(post):
-            if post.is_reply:
-                post2 = post.in_reply_to
+
+    def timeline_iter(
+            self, 
+            account_name='', 
+            timestamp=None, 
+            minute_blur=BLUR_MINUTES, 
+            incl_now=False, 
+            only_latest=False,
+            lim=LIM_TIMELINE, 
+            unread_only=False, 
+            seen=set(), 
+            max_mins=60,
+            filter_func=lambda post: True,
+            **kwargs):
+
+        iterr=iter_datetimes(
+            timestamp, 
+            minute_blur=minute_blur, 
+            max_mins=max_mins
+        )
+        if not incl_now: next(iterr)
+        i=0
+        for dtobj in iterr:
+            if i>=lim: break
+            posts = self.timeline_minute(
+                account_name=account_name,
+                dtobj=dtobj,
+                minute_blur=minute_blur,
+                **kwargs
+            )
+            if posts:
+                for post in posts:
+                    if i>=lim: break
+                    if not unread_only or not post.is_read:
+                        if not {p._id for p in post.allcopies} & seen:
+                            if filter_func(post):
+                                yield post
+                                i+=1
+                if only_latest: break
                 
-                post1id = ensure_post_node(post)
-                post2id = ensure_post_node(post2)
-                # post2id = add_user_post(post2)
-
-                G.add_edge(post1id, post2id)
-
-                add_replies(post2)
-            # if post.is_boost:
-            #     post2 = post.in_boost_of
-            #     post1id = ensure_post_node(post)
-            #     post2id = add_user_post(post2)
-            #     # post2id = ensure_post_node(post2)
-            #     G.add_edge(post1id, post2id)
-
-        # build
-        for post in self.posts:
-            add_user_post(post)
-
-        
-        return G
-
-        
-    def to_adjmat(self, g=None):
-        if not g: g = self.graph()
-        return pd.DataFrame(
-            nx.adjacency_matrix(g).todense(),
-            columns = g.nodes,
-            index = g.nodes
-        )
-
-    def to_d3graph(self, g=None):
-        from d3graph import d3graph
-        if not g: g = self.graph()
-        adjmat = self.to_adjmat(g=g)
-        d3 = d3graph()
-        d3.graph(adjmat)
-        
-        import palettable
-        cmap = palettable.colorbrewer.qualitative.Dark2_7.hex_colors
-        
-
-
-        ntypes = [d.get('node_type','node') for n,d in g.nodes(data=True)]
-        nlabels = [d.get('label','?') for n,d in g.nodes(data=True)]
-        ntooltips = [d.get('tooltip','?') for n,d in g.nodes(data=True)]
-        ntypes_setl = list(set(ntypes))
-        
-        def ntype(node):
-            return g.nodes[node]['node_type']
-
-        def sizer(node, factor=7.5):
-            ntyp=ntype(node)
-            if ntyp=='post':
-                return 2*factor
-            elif ntyp=='user':
-                return 1*factor
-            return .5*factor
-
-        ncolors = [cmap[ntypes_setl.index(ntyp)] for ntyp in ntypes]
-        nsizes = [sizer(n) for n in g.nodes()]
-
-
-        d3.set_node_properties(
-            label=nlabels,
-            tooltip=ntooltips,
-            color='cluster',
-            size=nsizes
-            # edge_color=ncolors,
-            # edge_size=2
-
-        )
-        d3.set_edge_properties(directed=True)
-        return d3
-
-
-    def to_pyvis(self, g=None):
-        from pyvis.network import Network
-        if not g: g = self.graph()
-        
-        # expand
-        for n,d in g.nodes(data=True):
-            obj = d.get('obj')
-            if d.get('node_type')=='user':
-                g.nodes[n]['shape']='circularImage'
-                g.nodes[n]['image'] = d.get('obj').avatar
-                g.nodes[n]['size'] = 25
-            elif d.get('node_type')=='post':
-                g.nodes[n]['shape']='box'
-                g.nodes[n]['label']=' '.join(w for w in obj.text.split() if w and w[0]!='@')[:40]
                 
-        # filter
-        for n,d in g.nodes(data=True):
-            for k,v in list(d.items()):
-                if type(v) not in {float,int,str,dict,list}:
-                    del g.nodes[n][k]
-        
-        # make net
-        nt = Network(
-            width='100%',
-            height='800px',
-            directed=True,
-            cdn_resources = 'remote',    
-            notebook=True
-        )
-        nt.from_nx(g)
-        return nt.show('nx.html')
-
-
-
-
-def parse_account_name(acct):
-    un, server = '', ''
-    acct = acct.strip()
     
-    if acct and '@' in acct:
-        if acct.startswith('@'):
-            return parse_account_name(acct[1:])
+    def timeline_iter_mp(
+            self, 
+            account_name='', 
+            timestamp=None, 
+            minute_blur=BLUR_MINUTES, 
+            incl_now=False, 
+            lim=LIM_TIMELINE, 
+            unread_only=False, 
+            seen=set(), 
+            max_mins=60,
+            num_proc=4,
+            filter_func=lambda post: True,
+            **kwargs):
 
-        elif acct.count('@')>1:
-            return parse_account_name(acct.split('/@',1)[-1])
+        iterr=iter_datetimes(timestamp, minute_blur=minute_blur, max_mins=max_mins)
+        if not incl_now: next(iterr)
 
-        elif acct.startswith('http'):
-            server, un = acct.split('/@')
-            un = un.split('/')[0]
-            server = server.split('://',1)[-1]
+        objs = [(account_name,dtobj,minute_blur,kwargs) for dtobj in iterr]
 
-        elif acct.count('@')==1:
-            un, server = acct.split('@',1)
-            server = server.split('/')[0]
+        def _init(state):
+            state['tron'] = Mastotron()
 
-    return un,server
+        def _task(state, account_name, dtobj, minute_blur, kwargs):
+            res = state['tron'].timeline_minute(
+                account_name=account_name,
+                dtobj=dtobj,
+                minute_blur=minute_blur,
+                **kwargs
+            )
+            return [p._id for p in res]
+
+        i=0
+        
+        from mpire.pool import WorkerPool
+        with WorkerPool(n_jobs=num_proc, use_worker_state=True, start_method='threading') as pool:
+            for idlist in pool.imap_unordered(_task, objs, worker_init=_init):
+                for id in idlist:
+                        post = Post(id)
+                        if post._id not in seen and (not unread_only or not post.is_read) and filter_func(post):
+                            yield post
+                            i+=1
+                            print(f'> [{i}] {post} ({post.datetime_str_h})')
+                            if i>=lim: break
+                        if i>=lim: break
+
+    def timeline(self, account_name='', **kwargs): 
+        return PostList(self.timeline_iter(account_name=account_name, **kwargs))
+
+
+
+    def latest(self, account_name='', **kwargs):
+        return PostList(
+            self.timeline_iter(
+                account_name=account_name,
+                only_latest=True,
+                **kwargs
+            )
+        )

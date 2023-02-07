@@ -1,5 +1,16 @@
 flask
-mastodon
+mastodon.py
 scipy
 pandas
 networkx
+Flask-Session
+flask_socketio
+IPython
+pyinstaller
+cogdb
+sqlitedict
+eventlet
+human_readable
+gevent
+gevent-websocket
+pyperclip

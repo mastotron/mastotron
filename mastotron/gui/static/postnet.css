@@ -1,0 +1,248 @@
+body {
+font: 11pt arial;
+color: black;
+width:100vw;
+height:120vh;
+/* background-color: white;  */
+background-color: #060718;
+/* background-image: url('/static/dalle2.png'); */
+background-repeat: no-repeat;
+background-position: left bottom;
+background-size: 200px;
+background-attachment: fixed;
+/* background-color: black;  */
+/* background-color: #041e2e; */
+/* background-color: #010b12; */
+}
+body::-webkit-scrollbar {
+    display: none;
+  }
+/* div { margin: 0; padding: 0; } */
+
+#oulo { 
+    position: fixed; 
+    top:0; 
+    left:0;
+    opacity: 0.8;
+    width:66px;
+    z-index:0;
+}
+
+#spinner {
+    position:fixed;
+    margin:auto;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width:10em;
+}
+
+#loadingimg {
+    animation:2s rotate infinite linear; 
+}
+
+@keyframes rotate{
+    100%{ transform:rotate(1turn) }
+}
+
+
+#helper {
+    font-size:1em;
+    top:5px;
+    right:5px;
+    color:gray;
+    /* width:50em; */
+    position: fixed;
+    text-align: left;
+    opacity:0.5;
+    /* display: none; */
+}
+#helper:hover{opacity:1}
+
+#logindiv {
+    top:0;bottom:0;right:0;left:0;
+    margin: auto;
+    width:200px;
+    height:200px;
+    background-color: red;
+}
+#logindiv h1 { font-size:1.2em; margin-bottom:1em;}
+
+
+
+
+.light-mode {
+    
+    color: black;
+}
+.dark-mode {
+    background-color: #010b12;
+    color: white;
+}
+
+a { color: lightblue; }
+#optbuttons a { color:gray; text-decoration: none; }
+#optbuttons li { margin-bottom:.5em; text-align: right; list-style: none;}
+
+
+#acctname { font-size: 11pt; }
+#header {
+    position:fixed;
+    top:1em;
+    right:0;
+    vertical-align: middle;
+    font-size: 12pt;
+    /* z-index:1; */
+
+    /* letter-spacing: .5em; */
+    color: gray;
+}
+#logmsg {
+    font: .8em;
+    bottom:5px;
+    right:5px;
+    text-align:right;
+    position:fixed;
+    color:gray;
+}
+#optbuttons {
+    position: fixed;
+    top: 75px;
+    left:25px;
+    font-size:2.5em;
+}
+
+#playpause { font-size:0.7em;}
+#adjspeed { font-size:0.7em;}
+
+#postnetviz {
+height: 90vh;
+width:  90vw;
+border: 1px dashed rgba(100,100,100,0);
+margin:0;
+margin-left:75px;
+padding:0;
+outline:0;
+z-index: 0;
+/* background-color: #eeeeee; */
+}
+#postnetviz:focus {outline:0;border:1px dashed rgba(100,100,100,0);}
+#postnetviz:active {outline:0;border:1px dashed rgba(100,100,100,0);}
+#postnetviz:hover {outline:0;border:1px dashed rgba(100,100,100,0);}
+.vis-network:focus {outline:0;border:none;}
+.vis-network:active {outline:0;border:none;}
+.vis-network:hover {outline:0;border:none;}
+canvas:focus {outline:0;border:none;}
+canvas:active {outline:0;border:none;}
+canvas:hover {outline:0;border:none;}
+
+
+#tweet { 
+    position: absolute;
+    top: 30px;
+    left: 20px;
+    /* min-width:300px; */
+    /* max-width: 400px; */
+    width: 400px;
+    padding: 0;
+    margin: 0;
+    background-color: white;
+    border-radius: 25px;
+    /* color: black; */
+    border: 1px solid #888888;
+    /* font-size:1.25em; */
+    backdrop-filter: blur(3px);
+    overflow: hidden;
+    /* white-space: nowrap; */
+    text-overflow: ellipsis;
+}
+
+input {
+background-color: #eeeeee; 
+/* color: gray; */
+border: 0px;
+text-align: left;
+}
+.post_postimg { width: 350px; }
+.post_avatarimg { 
+    height: 50px; 
+    width: 50px; 
+    border-radius: 50%;
+}
+
+.reblog {
+/* border:1px dotted black; */
+}
+.origpost {
+/* border:1px solid black; */
+}
+.post {
+padding:1em;
+margin: 0;
+/* text-align: center; */
+/* border: 1px solid darkgray; */
+/* color: red; */
+font-size:13pt;
+}
+.post_uristr {
+    font-size:11pt;
+    margin:0 auto;
+}
+.post_header {
+    font-size:11pt;
+    margin: 0;
+    padding: 0;
+}
+.post_stats { 
+    font-size:10pt;
+    margin: 0;
+    padding: 0;
+    margin-top: .5em;
+    margin-bottom:.25em;
+    margin-left: .25em;
+}
+
+
+#config {
+    /* position:absolute; */
+    /* top:5px; */
+    /* right:5px; */
+    z-index: 1;
+    width:20em;
+    /* height:5em; */
+    /* background-color: yellow; */
+    text-align: left;
+}
+
+
+#custom-handle {
+    width: 3em;
+    height: 1.6em;
+    top: 50%;
+    margin-top: -.8em;
+    text-align: center;
+    line-height: 1.6em;
+  }
+  
+
+.axis {
+    color:gray;
+    font-size:1em;
+    /* letter-spacing: .25em; */
+    position: fixed;
+    left:0;
+    bottom: 0;
+}
+
+#xaxis { 
+    left:1.5em;
+}
+
+#yaxis { 
+    left: -3.5em;
+    bottom: 5em;
+    transform: rotate(-90deg);
+}
+
+
+#pb-container { border-bottom: 0px; }

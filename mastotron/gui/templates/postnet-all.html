@@ -6,38 +6,18 @@
 
     <style type="text/css">
       body {
-        font: 12pt arial;
+        font: 14pt arial;
       }
-      #mynetwork {
-        height: 95vh; /* For 100% screen height */
-        width:  95vw; /* For 100% screen width */
-
-        /* width: 100%; */
-        /* height: 800px; */
+      #postnetviz {
+        width: 900px;
+        height: 900px;
         /* border: 1px solid lightgray; */
         /* background-color: #eeeeee; */
-        /* float:right; */
+        float:right;
       }
       #tweet { 
-        position: absolute;
-        top: 10px;
-        left: 10px;
         width:500px;
         min-height:200px;
-        background-color: white;
-      }
-      #tweet img {
-        width: 450px;
-      }
-      #tweet .author img { width:50px; }
-      .reblog {
-        border:1px dotted black;
-      }
-      .origpost {
-        border:1px solid black;
-      }
-      .post {
-        padding:0 1em;
       }
     </style>
 
@@ -67,7 +47,7 @@
         var edges = {{edges | tojson | safe}};
 
         // create a network
-        var container = document.getElementById("mynetwork");
+        var container = document.getElementById("postnetviz");
         var data = {
           nodes: nodes,
           edges: edges,
@@ -77,20 +57,45 @@
           // PHYSICS OPTIONS
           physics:{
             enabled: true,
+            barnesHut: {
+              theta: 0.5,
+              gravitationalConstant: -2000,
+              centralGravity: 0.3,
+              springLength: 95,
+              springConstant: 0.04,
+              damping: 0.09,
+              avoidOverlap: 0
+            },
+            forceAtlas2Based: {
+              theta: 0.5,
+              gravitationalConstant: -50,
+              centralGravity: 0.01,
+              springConstant: 0.08,
+              springLength: 100,
+              damping: 0.4,
+              avoidOverlap: 0
+            },
+            repulsion: {
+              centralGravity: 0.2,
+              springLength: 200,
+              springConstant: 0.05,
+              nodeDistance: 100,
+              damping: 0.09
+            },
             hierarchicalRepulsion: {
-              centralGravity: 0.25,
+              centralGravity: 0.2,
               springLength: 100,
               springConstant: 0.01,
               nodeDistance: 120,
               damping: 0.09,
               avoidOverlap: 1
             },
-            maxVelocity: 10,
-            minVelocity: 0.001,
+            maxVelocity: 50,
+            minVelocity: 0.1,
             solver: 'hierarchicalRepulsion',
             stabilization: {
               enabled: true,
-              iterations: 200,
+              iterations: 100,
               updateInterval: 100,
               onlyDynamicEdges: false,
               fit: true
@@ -101,15 +106,33 @@
           },
 
 
-
           // EDGES OPTIONS
           edges:{
             arrows: {
               to: {
                 enabled: true,
+                // imageHeight: undefined,
+                // imageWidth: undefined,
                 scaleFactor: 1,
+                // src: undefined,
                 type: "arrow"
               },
+              middle: {
+                enabled: false,
+                imageHeight: 32,
+                imageWidth: 32,
+                scaleFactor: 1,
+                src: "https://visjs.org/images/visjs_logo.png",
+                type: "image"
+              },
+              from: {
+                enabled: false,
+                // imageHeight: undefined,
+                // imageWidth: undefined,
+                scaleFactor: 1,
+                // src: undefined,
+                type: "arrow"
+              }
             },
             endPointOffset: {
               from: 0,
@@ -125,6 +148,45 @@
               opacity:1.0
             },
             dashes: false,
+            font: {
+              color: '#343434',
+              size: 16, // px
+              face: 'arial',
+              background: 'none',
+              strokeWidth: 2, // px
+              strokeColor: '#ffffff',
+              align: 'horizontal',
+              multi: false,
+              vadjust: 0,
+              bold: {
+                color: '#343434',
+                size: 16, // px
+                face: 'arial',
+                vadjust: 0,
+                mod: 'bold'
+              },
+              ital: {
+                color: '#343434',
+                size: 16, // px
+                face: 'arial',
+                vadjust: 0,
+                mod: 'italic',
+              },
+              boldital: {
+                color: '#343434',
+                size: 16, // px
+                face: 'arial',
+                vadjust: 0,
+                mod: 'bold italic'
+              },
+              mono: {
+                color: '#343434',
+                size: 16, // px
+                face: 'courier new',
+                vadjust: 2,
+                mod: ''
+              }
+            },
             hidden: false,
             hoverWidth: 1.5,
             label: undefined,
@@ -168,7 +230,7 @@
             smooth: {
               enabled: false,
               type: "dynamic",
-              roundness: 0.1
+              roundness: 0.5
             },
             title:undefined,
             value: undefined,
@@ -176,9 +238,10 @@
             widthConstraint: false
           },
           
+          
           // LAYOUT OPTIONS
           layout: {
-            randomSeed: 0.69,
+            randomSeed: undefined,
             improvedLayout:true,
             clusterThreshold: 150,
             hierarchical: {
@@ -216,14 +279,9 @@
             selectable: true,
             selectConnectedEdges: true,
             tooltipDelay: 300,
-            zoomSpeed: .1,
+            zoomSpeed: 1,
             zoomView: true,
-          },
-
-
-          // manipulation: {
-          //   enabled: true,
-          // },
+          }
         };
         network = new vis.Network(
           container,
@@ -232,47 +290,10 @@
         );
 
         network.on("hoverNode", function (params) {
-          // console.log("hoverNode Event:", params);
+          console.log("hoverNode Event:", params);
           node = params.node;
           node_d = nodes[node-1];
-          console.log([node, node_d, nodes]);
-          // if (node_d['node_type'] == 'post') {
-            $('#tweet').html(node_d['html']);
-            $('#tweet').show();
-          // }
-        });
-
-        network.on("click", function (params) {
-          node = this.getNodeAt(params.pointer.DOM);
-          if (node == undefined) {
-            $('#tweet').hide();
-          }
-        });
-
-        function getdownstreamnodes(node) {
-          nodes_downstream = network.getConnectedNodes(node, 'to');
-
-          for (node2 of nodes_downstream) {
-            nodes2_downstream = getdownstreamnodes(node2); //network.getConnectedNodes(node2);
-            nodes_downstream.push(...nodes2_downstream);
-          }
-          nodes_downstream.push(node);
-          return [...new Set(nodes_downstream)];
-        }
-
-        function delnodes(nl) {
-          network.selectNodes(nl);
-          network.deleteSelected();
-        }
-
-
-        network.on("doubleClick", function (params) {
-          $('#tweet').hide();
-          node = this.getNodeAt(params.pointer.DOM);
-          if (node != undefined) {
-            nlx = getdownstreamnodes(node);
-            delnodes(nlx);
-          }
+          $('#tweet').html(node_d['html']);
         });
         
       }
@@ -280,7 +301,7 @@
   </head>
 
   <body onload="draw()">
-    <div id="mynetwork"></div>
+    <div id="postnetviz"></div>
     <div id="tweet"></div>
   </body>
 </html>
