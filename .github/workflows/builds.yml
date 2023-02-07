@@ -15,6 +15,7 @@ jobs:
       with:
         python-version: 3.8
 
+    - run: pip install -U pip
     - run: pip install -r requirements.txt pyinstaller
     - run: pyinstaller build.spec
     # Optionally verify that it works (provided that it does not need user interaction)

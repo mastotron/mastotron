@@ -68,7 +68,6 @@ import logging as log
 logging.getLogger().setLevel(logging.INFO)  # choose your level here
 from tqdm import tqdm
 import mastodon
-import pyperclip
 from multiprocessing.pool import ThreadPool
 
 

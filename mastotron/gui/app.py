@@ -359,7 +359,11 @@ def mainview(**kwargs):
     main(**kwargs)
 
 def main(debug=False, **kwargs): 
-    pyperclip.copy(HOSTPORTURL)
+    try:
+        import pyperclip
+        pyperclip.copy(HOSTPORTURL)
+    except Exception:
+        pass
     print(WELCOME_MSG)
     try:
         return socketio.run(
