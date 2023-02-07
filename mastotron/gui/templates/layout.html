@@ -51,6 +51,10 @@
             
       <li><a href="#" onclick="prompt_for_num_nodes()" title="Set number of posts shown">#</a></li>
 
+      <li><a id="playpause" href="#" onclick="toggle_playpause()" title="">▶</a></li>
+
+      
+      <li><a id="adjspeed" href="#" onclick="prompt_for_speed()" title="Adjust speed">⟤</a></li>
       
     </div>
 
@@ -67,11 +71,12 @@
     </a>
 
     <div id="helper">
-      Hover over nodes to read posts.<br/>
-      Press (D) to dismiss post.<br/>
-      Press (L) for latest post in queue.<br/>
-      Press (N) for next batch in queue.<br/>
+      Hover over a node to read it.<br/>
+      Right-click it to load replies.<br/>
+      Press (D) to dismiss it.<br/>
       Press (R) to refresh data.<br/>
+      Press (L) for latest in queue.<br/>
+      Press (N) for next in queue.<br/>
 
     <!-- (D) = dismiss<br/>
     (N) = next<br/>

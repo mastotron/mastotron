@@ -1,6 +1,6 @@
 // vars
-var TIME_TIL_UPDATE = 2500;
-var TIME_TIL_MOVED = 500;
+
+
 var BUSY=false;
 var FIXED = {x:false,y:false}
 var MODE = 'default';
@@ -551,7 +551,7 @@ function set_dark_mode() {
   $('input').css('color', darktxtcolor);
   $('#nightmode').attr('src',darkimg);
   change_node_color(darktxtcolor);
-  socket.emit('set_darkmode', DARKMODE);
+  // set_dark_mode_opt(DARKMODE);
 }
 
 function set_light_mode() {
@@ -567,7 +567,7 @@ $('input').css('color', lighttxtcolor);
 $('#nightmode').attr('src',lightimg);
 // $('#optbuttons a').css('color',lightaccent);
 change_node_color(lighttxtcolor);
-socket.emit('set_darkmode', DARKMODE);
+// set_dark_mode_opt(DARKMODE);
 }
 
 // var currentMousePos = { x: -1, y: -1 };
@@ -660,7 +660,7 @@ function get_our_status_for_updates(lim=0,force_push=false) {
 function next_batch_of_nodes_please() {
   clear_network();
   get_more_nodes();
-  request_updates(lim=0);
+  // request_updates(lim=0);
 }
 
 function request_updates(lim=1, force_push=false) {
@@ -680,10 +680,11 @@ function request_updates(lim=1, force_push=false) {
     logmsg('idling with '+ns+' posts in queue @ '+get_time_str());
     turnover_nodes();
   }
-  get_more_nodes();
+  // get_more_nodes();
 }
 
-function turnover_nodes() {
+function turnover_nodes(force=false) {
+  if(PAUSE & !force){return;}
   // sort_stack();
   res = DATA_STACK.shift();
   if(res) {
@@ -763,18 +764,18 @@ function receive_updates_showing_latest_n(data) {
   }
 }
 
+
+// GOT UPDATE
+var ALREADY_UPDATED=false;
 socket.on('get_updates', function(data) {
-  var BUSY = false;
-  // console.log('BUSY',BUSY);
-  // console.log('got updates:',data);
-  receive_updates_with_stack_pushed(data);
-  // receive_updates_showing_latest_n(data);
-  // repos_nodes();
-  // if(nodes.length < get_lim_nodes_graph()) {
-  //   request_updates();
-  // } else {
-  // setTimeout(request_updates, TIME_TIL_UPDATE);
-  // }
+  console.log(PAUSE,ALREADY_UPDATED,nodes.length);
+  if(PAUSE & ALREADY_UPDATED & (!data.force_push)){
+    maybe_add_to_stack(data);
+    // receive_updates_with_stack(data);
+  } else {
+    ALREADY_UPDATED=true;
+    receive_updates_with_stack_pushed(data);
+  }
 });
 
 function maybe_add_to_stack(data) {
@@ -790,13 +791,18 @@ function sort_stack() {
 }
 
 function get_more_nodes() {
-  
-  while ((DATA_STACK.length > 0) && (nodes.length < get_lim_nodes_graph())) {
+  newdata={nodes:[], edges:[]};
+  var i=0;
+  while ((DATA_STACK.length > 0) && ((nodes.length+newdata.nodes.length) < get_lim_nodes_graph())) {
     data = DATA_STACK.pop()
-    if(data) {
-      update_nodes(data);
-    }
+    newdata.nodes.push(...data.nodes);
+    newdata.edges.push(...data.edges);
+    i=i+1;
   }
+  // pause=PAUSE;
+  // set_playpause(true);
+  if(i>0) { update_nodes(newdata); }
+  // set_playpause(pause);
 }
 
 socket.on('logmsg', function(msg) {if(msg){logmsg(msg)};});
@@ -807,7 +813,6 @@ socket.on('logmsg', function(msg) {if(msg){logmsg(msg)};});
 $(document).on('keydown', function (event) {
   // console.log('event.which =',event.which);
   if (event.which==27) {   // escape
-    set_mode_default();
     network.unselectAll();
     hide_status_div();
         
@@ -826,20 +831,16 @@ $(document).on('keydown', function (event) {
   } else if (event.which==68) {  // d
     network.getSelectedNodes().forEach(del_node);
 
-  // } else if (event.which==78) {  // n
-    // sort_stack();
-    // turnover_nodes_rev();
-
   } else if (event.which==76) {  // l
     sort_stack();
-    turnover_nodes();
+    turnover_nodes(force=true);
     
   } else if (event.which==77) { // m
     network.getSelectedNodes().forEach(add_context);
 
-  // } else if (event.which==67) { // c
   } else if (event.which==78) { // n
     next_batch_of_nodes_please();
+    // turnover_nodes(force=true);
 
   }
   
@@ -879,7 +880,7 @@ function repos_nodes(overwrite_x=false, overwrite_y=false) {
     // if(nd.y==undefined){nd.y=0;}
     // nodes.update(nd);
     // nd.x=ndx; nd.y=ndy; nodes.update(nd);
-    moveNodeAnim(nd.id,ndx,ndy,TIME_TIL_MOVED);
+    moveNodeAnim(nd.id,ndx,ndy,TIME_TIL_MOVED * 1000);
 
     // nodes.update(nd);
     // if(nodes.length < get_lim_nodes_graph()) {
@@ -896,9 +897,8 @@ function repos_nodes(overwrite_x=false, overwrite_y=false) {
     
 };
 
-
 // start
-$(document).ready(function(){  
+$(document).ready(function(){
   reinforce_darkmode();
   startnet();
   $(document).tooltip();
@@ -906,7 +906,9 @@ $(document).ready(function(){
   // setInterval(function() { fix_nodes(); }, 10);  
   // setInterval(function() { get_more_nodes(); }, 500);
   setInterval(function() { request_pushes(); }, 100);
-  setInterval(function() { request_updates(); },TIME_TIL_UPDATE);
+  setInterval(function() { request_updates(); }, TIME_TIL_UPDATE * 1000);
+
+  setInterval(function() { request_updates(lim=0, force_push=true); }, 60 * 1000 * 5); // once every 5 mins a hard ref
   
   reinforce_darkmode();
 

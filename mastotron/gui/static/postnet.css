@@ -37,9 +37,10 @@ body::-webkit-scrollbar {
     /* width:50em; */
     position: fixed;
     text-align: left;
-    opacity:0.75;
+    opacity:0.5;
     /* display: none; */
 }
+#helper:hover{opacity:1}
 
 #logindiv {
     top:0;bottom:0;right:0;left:0;
@@ -93,6 +94,9 @@ a { color: lightblue; }
     left:25px;
     font-size:2.5em;
 }
+
+#playpause { font-size:0.7em;}
+#adjspeed { font-size:0.7em;}
 
 #postnetviz {
 height: 90vh;

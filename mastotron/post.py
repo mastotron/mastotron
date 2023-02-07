@@ -581,8 +581,8 @@ class PostModel(DictModel):
         odx['text'] = post.text if not post.is_boost else 'RT'
         odx['node_type']='post'
         odx['scores'] = post.scores
-        odx['score'] = post.scores.get(SCORE_TYPE, np.nan)
-        odx['timestamp'] = post.timestamp
+        odx['score'] = post.scores.get(SCORE_TYPE, np.nan) + (random.random()/1000)
+        odx['timestamp'] = post.timestamp + (random.random()/1000)
         odx['datetime_str_h'] = post.datetime_str_h
         # odx['fixed']=dict(x=False,y=False)
         odx['num_replies'] = post.num_replies

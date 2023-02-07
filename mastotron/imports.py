@@ -33,7 +33,7 @@ path_static = os.path.join(path_web,'static')
 path_templates = os.path.join(path_web,'templates')
 
 from pprint import pprint, pformat
-import textwrap
+import textwrap,random
 import numpy as np
 from functools import cached_property, lru_cache, total_ordering
 cache = lru_cache(maxsize=None)

@@ -44,10 +44,14 @@ def logmsg_tron(*x,**y):
     print('>>>',new_msgs[-1])
 
 def logmsg(*x,**y):
-    emit('logmsg',' '.join(str(xx) for xx in x))
+    emitt('logmsg',' '.join(str(xx) for xx in x))
     threading.Event().wait(0.1)
-def logsuccess(x): emit('logsuccess',str(x))
-def logerror(x): emit('logerror',str(x))
+def logsuccess(x): emitt('logsuccess',str(x))
+def logerror(x): emitt('logerror',str(x))
+
+def emitt(key,val,*vals,broadcast=True,**opts):
+    emit(key,val,*vals,broadcast=broadcast,**opts)
+
 
 #####
 HOSTPORTURL=f'http://{HOST}:{PORT}'
@@ -114,11 +118,13 @@ def get_config(d={}):
 
 @socketio.event
 def req_config(d={}):
-    emit('res_config',get_config(d))
+    emitt('res_config',get_config(d))
 
 @socketio.event
-def set_config(d):
-    for k,v in d.items(): session[k]=v
+def set_config(k,v):
+    # print(f'setting config: {k} -> {v}')
+    # print(f'{k} in config now =',get_config().get(k))
+    session[k]=v
 
 @socketio.event
 def set_acct_name(data):
@@ -130,12 +136,12 @@ def set_acct_name(data):
             try:
                 url = tron.user_auth_url(acct)
                 logmsg('Please enter activation code')
-                emit('get_auth_url', {'acct':acct,'url':url} )
+                emitt('get_auth_url', {'acct':acct,'url':url} )
             except Exception as e:
                 un,server=parse_account_name(acct)
-                emit('server_not_giving_code', {'server':server, 'acct':acct})
+                emitt('server_not_giving_code', {'server':server, 'acct':acct})
     else:
-        emit('invalid_user_name', data)
+        emitt('invalid_user_name', data)
         
 
 @socketio.event
@@ -147,10 +153,10 @@ def do_login(data):
         tron.api_user(acct, code=code, direct_input=False)
         if tron.user_is_init(acct):
             logmsg(f'{acct} logged in')
-            emit('login_succeeded', dict(acct=acct))
+            emitt('login_succeeded', dict(acct=acct))
         else:
             logmsg(f'{acct} NOT logged in')
-            emit('login_failed', dict(acct=acct))
+            emitt('login_failed', dict(acct=acct))
 
 
 def get_acct_name(data={}): return session.get('acct')
@@ -255,7 +261,7 @@ def update_posts(tl, omsg='refreshed', emit_key='get_updates',ids_done=None,unre
         if nodes or edges:
             odata = dict(nodes=nodes, edges=edges, logmsg=omsg, force_push=force_push)
             # for n in nodes: print('++',n['id'])
-            emit(emit_key, odata)
+            emitt(emit_key, odata)
             # time.sleep(0.1)
             threading.Event().wait(.1)
             return True
@@ -323,7 +329,7 @@ class OpenBrowser(Thread):
 
 def send_update(nodes=[], edges=[]):
     odata=dict(nodes=nodes, edges=edges)
-    emit('get_updates', odata)
+    emitt('get_updates', odata)
     return odata
 
 
@@ -334,7 +340,7 @@ def mainview(**kwargs):
     view(**kwargs)
     main(**kwargs)
 
-def main(debug=False, **kwargs): 
+def main(debug=True, **kwargs): 
     pyperclip.copy(HOSTPORTURL)
     print(WELCOME_MSG)
     return socketio.run(
