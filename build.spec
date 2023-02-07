@@ -75,31 +75,34 @@ app = BUNDLE(
 ######################################
 # https://github.com/pyinstaller/pyinstaller/issues/5154#issuecomment-690772204
 ##
+try:
+    print(app)
+    print(app.name, app.appname)
 
-print(app)
-print(app.name, app.appname)
+    ## Make app bundle double-clickable
+    import plistlib
+    from pathlib import Path
+    app_path = Path(app.name)
 
-## Make app bundle double-clickable
-import plistlib
-from pathlib import Path
-app_path = Path(app.name)
+    # read Info.plist
+    with open(app_path / 'Contents/Info.plist', 'rb') as f:
+        pl = plistlib.load(f)
 
-# read Info.plist
-with open(app_path / 'Contents/Info.plist', 'rb') as f:
-    pl = plistlib.load(f)
+    # write Info.plist
+    with open(app_path / 'Contents/Info.plist', 'wb') as f:
+        pl['CFBundleExecutable'] = 'wrapper'
+        plistlib.dump(pl, f)
 
-# write Info.plist
-with open(app_path / 'Contents/Info.plist', 'wb') as f:
-    pl['CFBundleExecutable'] = 'wrapper'
-    plistlib.dump(pl, f)
+    # write new wrapper script
+    shell_script = """#!/bin/bash
+    dir=$(dirname $0)
+    open -a Terminal file://${dir}/%s""" % app.appname
+    with open(app_path / 'Contents/MacOS/wrapper', 'w') as f:
+        f.write(shell_script)
 
-# write new wrapper script
-shell_script = """#!/bin/bash
-dir=$(dirname $0)
-open -a Terminal file://${dir}/%s""" % app.appname
-with open(app_path / 'Contents/MacOS/wrapper', 'w') as f:
-    f.write(shell_script)
-
-# make it executable
-(app_path  / 'Contents/MacOS/wrapper').chmod(0o755)
-######################################
+    # make it executable
+    (app_path  / 'Contents/MacOS/wrapper').chmod(0o755)
+    ######################################
+except Exception as e:
+    print('!!',e,'!!','skipping,,,')
+    pass
