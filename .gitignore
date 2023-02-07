@@ -1,6 +1,5 @@
 *.egg-info
 mastotron_orig
-*.spec
 # Logs
 logs
 *.log

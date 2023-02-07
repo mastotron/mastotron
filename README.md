@@ -1,6 +1,15 @@
 # mastotron
 
-Experiments in algorithmifying mastodon
+Experiments rewiring social media
+
+## Demo
+
+
+
+## Installation
+
+* For Mac, see this release file: 
+
 
 ## Use as webserver
 
