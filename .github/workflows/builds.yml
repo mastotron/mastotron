@@ -44,15 +44,11 @@ jobs:
 
     - name: Zip if app
       if: runner.os == 'macOS'
-      run: mv dist/MastotronApp.app ./Mastotron.app
-      run: zip -r9 Mastotron.app.zip Mastotron.app
-      run: mv Mastotron.app.zip dist/
+      run: mv dist/MastotronApp.app ./Mastotron.app && zip -r9 Mastotron.app.zip Mastotron.app && mv Mastotron.app.zip dist/
 
     - name: Zip if app
       if: matrix.os == 'ubuntu-latest'
-      run: mv dist/MastotronApp .
-      run: zip -r9 MastotronApp.zip MastotronApp
-      run: mv MastotronApp.zip dist/
+      run: mv dist/MastotronApp . && zip -r9 MastotronApp.zip MastotronApp && mv MastotronApp.zip dist/
 
     - name: Upload release assets for linux
       if: matrix.os == 'ubuntu-latest'
