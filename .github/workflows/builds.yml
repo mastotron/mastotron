@@ -20,7 +20,7 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
-          draft: false
+          draft: true
           prerelease: false
 
 
@@ -42,15 +42,27 @@ jobs:
     - run: python -m pip install -r requirements.txt pyinstaller
     - run: pyinstaller build.spec
 
-    - name: Upload release assets for windows
-      if: runner.os == 'Windows'
+    - name: Zip if app
+      if: runner.os == 'macOS'
+      run: mv dist/MastotronApp.app ./Mastotron.app
+      run: zip -r9 Mastotron.app.zip Mastotron.app
+      run: mv Mastotron.app.zip dist/
+
+    - name: Zip if app
+      if: matrix.os == 'ubuntu-latest'
+      run: mv dist/MastotronApp .
+      run: zip -r9 MastotronApp.zip MastotronApp
+      run: mv MastotronApp.zip dist/
+
+    - name: Upload release assets for linux
+      if: matrix.os == 'ubuntu-latest'
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ needs.create_release.outputs.upload_url }}
-        asset_name: Mastotron.exe
-        asset_path: ./dist/MastotronApp
+        asset_name: Mastotron-linux.zip
+        asset_path: ./dist/MastotronApp.zip
         asset_content_type: application/octet-stream
 
     - name: Upload release assets for mac
@@ -60,6 +72,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ needs.create_release.outputs.upload_url }}
-        asset_name: Mastotron.app
-        asset_path: ./dist/MastotronApp.app
+        asset_name: Mastotron-macos.zip
+        asset_path: ./dist/Mastotron.app.zip
         asset_content_type: application/octet-stream
