@@ -1,5 +1,19 @@
 var ALREADY_UPDATED=false;
 
+var darkbgcolor = '#060718'; //'rgb(20,20,23)'; //#28282B';
+var lightbgcolor = '#F5F5ED';
+var lighttweetbg = 'white';
+var darktweetbg = 'rgba(30,30,33, 0.9)'; //#28282B';
+var darkaccent = '#B928DD';
+var lightaccent = '#1C263D';
+var darktxtcolor = 'white';
+var lighttxtcolor = 'black';
+var darkimg = "/static/dark-mode-6682-inv.png";
+var lightimg = "/static/dark-mode-6682.png";
+var darkbgimg = '/static/dalle2b-small.png';
+var nodebordercolor = '#6F0C80';
+var lightbgimg = '/static/dalle3-small.png';
+
 var PAUSE=false;
 var TIME_TIL_UPDATE = 2.5;
 var TIME_TIL_MOVED = 0.5;
@@ -108,6 +122,40 @@ function set_lim_nodes_stack(lim) { return set_in_config('LIM_NODES_STACK',lim);
 
 
 
+function set_dark_mode() {
+  DARKMODE = 1;
+  // $('#oulo').attr('src',darkbgimg);
+  $('body').css('background-color', darkbgcolor);
+  // $('body').css('background-image', 'url("'+darkbgimg+'")');
+  // $('#optbuttons a').css('color',darkaccent);
+  $('body').css('color', darktxtcolor);
+  $('#tweet').css('background-color', darktweetbg);
+  $('#pb-container').css('background-color', darktweetbg);
+  $('#tweet').css('border', '1px solid black');
+  $('input').css('background-color', darkbgcolor);
+  $('input').css('color', darktxtcolor);
+  $('#nightmode').attr('src',darkimg);
+  change_node_color(darktxtcolor);
+  // set_dark_mode_opt(DARKMODE);
+}
+
+function set_light_mode() {
+DARKMODE = 0;
+// $('#oulo').attr('src',lightbgimg);
+$('body').css('background-color', lightbgcolor);
+// $('body').css('background-image', 'url("'+lightbgimg+'")');
+$('body').css('color', lighttxtcolor);
+$('#tweet').css('background-color', lighttweetbg);
+$('#tweet').css('border', '1px solid lightgray');
+$('input').css('background-color', lightbgcolor);
+$('input').css('color', lighttxtcolor);
+$('#nightmode').attr('src',lightimg);
+// $('#optbuttons a').css('color',lightaccent);
+change_node_color(lighttxtcolor);
+// set_dark_mode_opt(DARKMODE);
+}
+
+
 function toggle_darkmode() {
   if (DARKMODE==1) { set_light_mode(); } else { set_dark_mode(); }
 }
@@ -188,14 +236,6 @@ function set_spinner() {
   $('#spinner').show();
 }
 
-
-
-$(document).ready(function(){  
-  reinforce_darkmode();
-  set_playpause(get_in_config('pause'));
-  if(!ALREADY_UPDATED){set_spinner();}
-  // set_speed_update(get_in_config('TIME_TIL_UPDATE'));
-});
 
 
 

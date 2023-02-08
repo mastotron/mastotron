@@ -49,7 +49,7 @@ exe = EXE(
     a.datas,
     [],
     name='MastotronApp',
-    debug=False,
+    debug=True,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
@@ -61,6 +61,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon='mastotron/gui/static/dalle3-transp-small.ico'
 )
 
 
@@ -68,7 +69,7 @@ app = BUNDLE(
     exe,
     name='MastotronApp.app',
     appname='MastotronApp',
-    icon=None,
+    icon='mastotron/gui/static/dalle3-transp-small.ico',
     bundle_identifier=None,
 )
 

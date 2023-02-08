@@ -316,7 +316,7 @@ def set_in_session(dict):
 
 @socketio.event
 def mark_as_read(node_ids):
-    print('mark_as_read', node_ids)
+    # print('mark_as_read', node_ids)
     for node_id in node_ids:
         post = Post(node_id)
         post.mark_read()

@@ -5,18 +5,6 @@ var BUSY=false;
 var FIXED = {x:false,y:false}
 var MODE = 'default';
 var SCORE_TYPE = 'All';
-var darkbgcolor = '#060718'; //'rgb(20,20,23)'; //#28282B';
-var lightbgcolor = '#F5F5ED';
-var lighttweetbg = 'white';
-var darktweetbg = 'rgba(30,30,33, 0.9)'; //#28282B';
-var darkaccent = '#B928DD';
-var lightaccent = '#1C263D';
-var darktxtcolor = 'white';
-var lighttxtcolor = 'black';
-var darkimg = "/static/dark-mode-6682-inv.png";
-var lightimg = "/static/dark-mode-6682.png";
-var darkbgimg = '/static/dalle2b-small.png';
-var lightbgimg = '/static/dalle3-small.png';
 // var limnodesgraph = 15;
 var limstack = 60;
 if (DARKMODE==1) { 
@@ -24,7 +12,6 @@ if (DARKMODE==1) {
 } else { 
   var txtcolor = lighttxtcolor;  
 }
-var nodebordercolor = '#6F0C80';
 var DATA_STACK = [];
 
 
@@ -536,40 +523,6 @@ function size_nodes_score(max_size=40, min_size=20, score_type=SCORE_TYPE) {
 
 
 
-
-function set_dark_mode() {
-  DARKMODE = 1;
-  // $('#oulo').attr('src',darkbgimg);
-  $('body').css('background-color', darkbgcolor);
-  // $('body').css('background-image', 'url("'+darkbgimg+'")');
-  // $('#optbuttons a').css('color',darkaccent);
-  $('body').css('color', darktxtcolor);
-  $('#tweet').css('background-color', darktweetbg);
-  $('#pb-container').css('background-color', darktweetbg);
-  $('#tweet').css('border', '1px solid black');
-  $('input').css('background-color', darkbgcolor);
-  $('input').css('color', darktxtcolor);
-  $('#nightmode').attr('src',darkimg);
-  change_node_color(darktxtcolor);
-  // set_dark_mode_opt(DARKMODE);
-}
-
-function set_light_mode() {
-DARKMODE = 0;
-// $('#oulo').attr('src',lightbgimg);
-$('body').css('background-color', lightbgcolor);
-// $('body').css('background-image', 'url("'+lightbgimg+'")');
-$('body').css('color', lighttxtcolor);
-$('#tweet').css('background-color', lighttweetbg);
-$('#tweet').css('border', '1px solid lightgray');
-$('input').css('background-color', lightbgcolor);
-$('input').css('color', lighttxtcolor);
-$('#nightmode').attr('src',lightimg);
-// $('#optbuttons a').css('color',lightaccent);
-change_node_color(lighttxtcolor);
-// set_dark_mode_opt(DARKMODE);
-}
-
 // var currentMousePos = { x: -1, y: -1 };
 // $(document).mousemove(function(event) {
 //   currentMousePos.x = event.pageX;
@@ -921,6 +874,9 @@ function set_intervals() {
 
 $(document).ready(function(){
   reinforce_darkmode();
+  set_playpause(get_in_config('pause'));
+  if(!ALREADY_UPDATED){set_spinner();}
+
   startnet();
   $(document).tooltip();
   set_intervals();
