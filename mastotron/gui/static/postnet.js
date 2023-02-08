@@ -322,9 +322,9 @@ function update_nodes(data) {
   style_edges();
   // lim_nodes();
   
-  // setTimeout(function(){
-    // logmsg('currently '+nodes.length.toString()+' posts visible and '+DATA_STACK.length.toString()+' in queue');
-  // }, 100);
+  setTimeout(function(){
+    logmsg('currently '+nodes.length.toString()+' posts visible and '+DATA_STACK.length.toString()+' in queue');
+  }, 1000);
 }
 
 function sleep(ms) {

@@ -125,7 +125,7 @@ def keepalive():
 
 def get_config(d={}):
     defaultd={
-        'LIM_NODES_GRAPH':10,
+        'LIM_NODES_GRAPH':15,
         'LIM_NODES_STACK':100,
         'DARKMODE':1,
         'VNUM':vnum,
@@ -290,7 +290,7 @@ def update_posts(tl, omsg='refreshed', emit_key='get_updates',ids_done=None,unre
 
 @socketio.event
 def add_context(node_id):
-    print('add_context',node_id)
+    # print('add_context',node_id)
     post = Post(node_id)
     if post:# unread_convo = PostList(p for p in post.convo if not p.is_read)
         convo = post.convo
