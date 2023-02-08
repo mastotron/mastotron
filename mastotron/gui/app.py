@@ -48,7 +48,7 @@ def logmsg(*x,**y):
 def logsuccess(x): emitt('logsuccess',str(x))
 def logerror(x): emitt('logerror',str(x))
 
-def emitt(key,val,*vals,broadcast=False,**opts):
+def emitt(key,val,*vals,broadcast=True,**opts):
     emit(key,val,*vals,broadcast=broadcast,**opts)
 
 

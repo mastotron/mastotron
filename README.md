@@ -1,6 +1,6 @@
 # mastotron
 
-Experiments rewiring social media
+A new interface to mastodon and other new experiments in social media.
 
 ## Demo
 
@@ -14,15 +14,16 @@ Experiments rewiring social media
 2. Unzip the file to reveal `Mastotron.app`
 3. Double-click this and wait for a terminal to appear
 4. Wait 30-60sec here until a text-art elephant appears with a URL
-5. Paste this URL (auto-copied to clipboard in step 4) into your browser
+5. Paste this URL,`http://localhost:1789` (which was auto-copied to clipboard) into your browser
+6. Bookmark this URL: it's always `localhost:1789`
 
 ### Linux
 
-1. Download the latest zip file release (`Mastotron-linux.zip`).
+1. [Download the latest zip file release (`Mastotron-linux.zip`)](https://github.com/quadrismegistus/mastotron/releases/download/v1.0.0/Mastotron-linux.zip)
 2. Unzip the file to reveal `MastotronApp`
 3. Double-click this and wait for a terminal to appear
 4. Wait 30-60sec here until a text-art elephant appears with a URL
-5. Paste this URL (auto-copied to clipboard in step 4) into your browser
+5. Paste this URL (which was auto-copied to clipboard) into your browser
 
 
 ### Windows

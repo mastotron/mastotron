@@ -322,9 +322,9 @@ function update_nodes(data) {
   style_edges();
   // lim_nodes();
   
-  setTimeout(function(){
-    logmsg('currently '+nodes.length.toString()+' posts visible and '+DATA_STACK.length.toString()+' in queue');
-  }, 100);
+  // setTimeout(function(){
+    // logmsg('currently '+nodes.length.toString()+' posts visible and '+DATA_STACK.length.toString()+' in queue');
+  // }, 100);
 }
 
 function sleep(ms) {
@@ -621,7 +621,7 @@ function request_updates(lim=1, force_push=false) {
   var BUSY = true;
   ns=DATA_STACK.length.toString();
   if (force_push | (DATA_STACK.length<=get_lim_nodes_stack())) {
-    logmsg('refreshing with '+ns+' posts in queue @ '+get_time_str());
+    if(ns){logmsg('refreshing with '+ns+' posts in queue @ '+get_time_str());}
     socket.emit(
       'get_updates', 
       get_our_status_for_updates(
@@ -771,12 +771,10 @@ $(document).on('keydown', function (event) {
         
   } else if (event.ctrlKey | event.metaKey) {
 
-    if (event.which == 65) { // a (select all)
+    if (event.which==82) {  // command r
       event.preventDefault();
-      node_ids = [];
-      iter_nodes_d().forEach(function(nd){node_ids.push(nd.id)});
-      network.selectNodes(node_ids);
-    } 
+      request_updates(lim=10, force_push=true);
+    }
 
   } else if (event.which==82) {  // r
     request_updates(lim=3, force_push=true);

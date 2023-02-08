@@ -15,8 +15,8 @@ var nodebordercolor = '#6F0C80';
 var lightbgimg = '/static/dalle3-small.png';
 
 var PAUSE=false;
-var TIME_TIL_UPDATE = 2.5;
-var TIME_TIL_MOVED = 0.5;
+var TIME_TIL_UPDATE = 3;
+var TIME_TIL_MOVED = 1;
 
 
 var pb = new PromptBoxes({toasts: {duration: 2500, allowClose: true}});
