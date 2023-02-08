@@ -10,7 +10,7 @@ Experiments rewiring social media
 
 ### MacOS
 
-1. [Download the latest zip file release (`Mastotron-macos.zip`)](https://github.com/quadrismegistus/mastotron/releases/download/untagged-9a2780a1f2e61479a906/Mastotron-macos.zip)
+1. [Download the latest zip file release (`Mastotron-macos.zip`)](https://github.com/quadrismegistus/mastotron/releases/download/v1.0.0/Mastotron-macos.zip)
 2. Unzip the file to reveal `Mastotron.app`
 3. Double-click this and wait for a terminal to appear
 4. Wait 30-60sec here until a text-art elephant appears with a URL
