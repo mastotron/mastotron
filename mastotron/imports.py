@@ -72,6 +72,7 @@ from multiprocessing.pool import ThreadPool
 
 
 path_data = os.path.expanduser('~/.mastotron')
+path_srvr = os.path.join(path_data, 'db.webview')
 path_env = os.path.join(path_data, 'config.json')
 path_db = os.path.join(path_data, 'db.sqlitedict')
 path_tinydb = os.path.join(path_data, 'db.tinydb')
