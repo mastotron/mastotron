@@ -1,35 +1,42 @@
-SEEN=set()
-
-
-import os,sys,socket,time,webbrowser,signal
+## internal imports
+import os,sys
 path_app = os.path.realpath(__file__)
 path_code = os.path.abspath(os.path.join(path_app,'..','..'))
 path_codedir = os.path.abspath(os.path.join(path_code,'..'))
 sys.path.insert(0,path_codedir)
-import threading
-
 from mastotron import *
 from mastotron import __version__ as vnum
 
-from threading import Lock,Thread,Event
 
+## external imports
+import socket,time,webbrowser,signal
+import gevent
+import threading
+from engineio.payload import Payload
+Payload.max_decode_packets = 500
+from threading import Lock,Thread,Event
 from flask import Flask, render_template, request, redirect, url_for, session, current_app
 from flask_session import Session
 from flask_socketio import SocketIO, send, emit
 from mastodon import StreamListener
 import os,time,sys,random
-from engineio.async_drivers import eventlet
-# from engineio.async_drivers import threading
-
+from engineio.async_drivers import gevent as gevent_async_driver
 import logging
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
-namespace = 'mastotron.web'
-seen_posts = set()
-STARTED=None
+
+## constants
+MAX_UPDATE=15
+CRAWL_LIM=10
+CRAWL_WAIT_SEC=60
+SEEN=set()
+CRAWL_STARTED={}
+LSTNR_STARTED={}
 new_urls = set()
 new_msgs = []
+ACCT = None
+
 
 # @lru_cache
 def Tron():
@@ -44,19 +51,20 @@ def logmsg_tron(*x,**y):
 
 def logmsg(*x,**y):
     emitt('logmsg',' '.join(str(xx) for xx in x))
-    threading.Event().wait(0.1)
+    gevent.sleep(0.1)
 def logsuccess(x): emitt('logsuccess',str(x))
 def logerror(x): emitt('logerror',str(x))
 
 def emitt(key,val,*vals,broadcast=True,**opts):
-    emit(key,val,*vals,broadcast=broadcast,**opts)
+    # emit(key,val,*vals,broadcast=broadcast,**opts)
+    socketio.emit(key,val,*vals,broadcast=broadcast,**opts)
 
 
 #####
 HOSTPORTURL=f'http://{HOST}:{PORT}'
 
-LINE1=f'MASTOTRON {vnum}'
-LINE2=f'URL: {HOSTPORTURL}'
+LINE1=f'MASTOTRON v{vnum}'
+LINE2=f'{HOSTPORTURL}'
 LINE3='(Visit this URL in your browser.'
 LINE4='It\'s been copied to your clipboard.)'
 # LINE4='(To exit, hold Ctrl+C or close terminal window.)'
@@ -101,8 +109,8 @@ app.config['SESSION_PERMANENT'] = True
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SESSION_FILE_DIR'] = os.path.join(path_data, 'flask_session')
 Session(app)
-socketio = SocketIO(app, manage_session=False, async_handlers=False)
-# socketio = SocketIO(app, manage_session=False, async_mode="threading")
+# socketio = SocketIO(app, manage_session=False, async_handlers=False)
+socketio = SocketIO(app, manage_session=False, async_mode="gevent")
 # socketio = SocketIO(app, manage_session=False, async_mode="eventlet")
 
 
@@ -110,10 +118,12 @@ socketio = SocketIO(app, manage_session=False, async_handlers=False)
 @app.route("/hello/")
 @app.route("/hello-vue/")
 def postnet(): 
+    global ACCT
     acct=session.get('acct')
     if not acct or not Tron().user_is_init(acct): 
         return render_template('login.html', acct=acct, config_d=get_config())
     else:
+        ACCT = acct
         return render_template('postnet.html', acct=acct, config_d=get_config())
 
 @app.route('/hello//flaskwebgui-keep-server-alive')
@@ -125,7 +135,7 @@ def keepalive():
 
 def get_config(d={}):
     defaultd={
-        'LIM_NODES_GRAPH':15,
+        'LIM_NODES_GRAPH':12,
         'LIM_NODES_STACK':100,
         'DARKMODE':1,
         'VNUM':vnum,
@@ -177,8 +187,8 @@ def do_login(data):
             emitt('login_failed', dict(acct=acct))
 
 
-def get_acct_name(data={}): return session.get('acct')
-def get_srvr_name(data={}): return parse_account_name(get_acct_name())[-1]
+def get_acct_name(data={}): return data.get('acct', ACCT)
+def get_srvr_name(data={}): return parse_account_name(get_acct_name(data))[-1]
 
 
 
@@ -187,57 +197,88 @@ def get_srvr_name(data={}): return parse_account_name(get_acct_name())[-1]
 #########
 
 class NodeListener(StreamListener):
+    def __init__(self,acct,*x,**y):
+        super().__init__(*x,**y)
+        self.acct=acct
+
     def on_update(self, status):
         url = status.get('url')
         post = Post(url, **status)
         if post:
-            new_urls.add(post)
+            update_posts([post], acct=self.acct, force_push=True)
 
 @socketio.event
 def start_updates(data={}):
-    return
-    global seen_posts, STARTED
-    seen_posts = set()
-    if not STARTED:
-        acct = get_acct_name(data)
-        print(f'\n>> listening for push updates on {acct}...')
-        Tron().api_user(acct).stream_user(
-            NodeListener(), 
-            run_async=True
-        )
-        STARTED=True
+    print('!!! starting updates !!!')
+    acct = get_acct_name(data)
+    # start_crawler(acct)
+    # start_listener(acct)
+    
+def start_crawler(acct):
+    if not acct: return
+    if acct in CRAWL_STARTED: CRAWL_STARTED[acct].stop()
+    CRAWL_STARTED[acct] = crawler = Crawler(acct)
+    socketio.start_background_task(crawler.run)
 
-@socketio.event
-def get_pushes(data={}):
-    global new_urls, new_msgs
-    if new_msgs: logmsg(new_msgs.pop())
+def start_listener(acct):
+    if not acct: return
+    if acct in LSTNR_STARTED: LSTNR_STARTED[acct].close()
 
-    new_posts = PostList(new_urls)
-    new_urls = set()
-    if new_posts:
-        update_posts(
-            new_posts, 
-            omsg='push updated',
-            force_push=True
-        )
+    LSTNR_STARTED[acct]=Tron().api_user(acct).stream_user(
+        NodeListener(acct),
+        run_async=True
+    )
 
-MAX_UPDATE=10
+
+
+class Crawler():
+    def __init__(self, acct, on=True):
+        self.acct=acct
+        self.on = on
+    
+    def crawl(self, lim=CRAWL_LIM, sec_between=.1):
+        global SEEN
+        if not self.on: return
+        iterr=Tron().timeline_iter(self.acct, seen=SEEN, max_mins=60*24, lim=lim)
+        for i,post in enumerate(iterr):
+            if not self.on: return
+            print(i,post)
+            update_posts([post], acct=self.acct, bg=True)
+            gevent.sleep(sec_between)
+    
+    def wait(self, sec=CRAWL_WAIT_SEC):
+        if not self.on: return
+        gevent.sleep(sec)
+    
+    def run(self):
+        while self.on:
+            self.crawl()
+            self.wait()
+
+    def stop(self):
+        self.on = False
+        gevent.sleep(0.001)
+
+
 
 @socketio.event
 def get_updates(data={}):
+    print('get_updates')
     global SEEN
     acct = get_acct_name()
     if not acct: return
+    print(acct)
     SEEN|=set(data.get('ids_now',[]))
     lim = data.get('lim') if data.get('lim') else get_config().get('LIM_NODES_STACK')
     force_push = data.get('force_push',False)
     only_latest = data.get('only_latest',False)
     max_mins = data.get('max_mins',60*24)
     unread_only=data.get('unread_only',True)
+    bg=data.get('bg',False)
 
     lim=lim if lim<MAX_UPDATE else MAX_UPDATE
-    # iterr=Tron().timeline_iter(
-    tl=Tron().timeline(
+    iterr=Tron().timeline_iter(
+    # tl=Tron().timeline(
         acct, 
         unread_only=unread_only,
         seen=SEEN,
@@ -245,25 +286,42 @@ def get_updates(data={}):
         lim=lim,
         only_latest=only_latest
     )
-    update_posts(tl, ids_done=SEEN, force_push=force_push)
-    SEEN|={p._id for post in tl for p in post.allcopies}
-    # for i,post in enumerate(iterr):
-    #     if i>=lim: break
-    #     update_posts(
-    #         [post],
-    #         ids_done=SEEN, 
-    #         force_push=force_push
-    #     )
-    #     SEEN|={p._id for p in post.allcopies}
+    # update_posts(tl, ids_done=SEEN, force_push=force_push)
+    # SEEN|={p._id for post in tl for p in post.allcopies}
+    posts=[]
+    for i,post in enumerate(iterr):
+        if len(posts) < lim:
+            if lim>1:
+                logmsg(f'found {i+1} of {lim}: {post} ({post.datetime_str_h})')
+            else:
+                logmsg(f'found: {post} ({post.datetime_str_h})')
+            posts.append(post)
+
+            update_posts([post], ids_done=SEEN, force_push=force_push, bg=bg, acct=acct)
+        else:
+            break
+    
+    # update_posts(posts, ids_done=SEEN, force_push=force_push, bg=bg)
+    SEEN|={p._id for post in posts for p in post.allcopies}
+
+        # update_posts(
+        #     [post],
+        #     ids_done=SEEN, 
+        #     force_push=force_push
+        # )
+        # SEEN|={p._id for p in post.allcopies}
 
 
 
-def update_posts(tl, omsg='refreshed', emit_key='get_updates',ids_done=None,unread_only=True, force_push=False):
+def update_posts(tl, omsg='refreshed', emit_key='get_updates',ids_done=None,unread_only=True, force_push=False, bg=False, acct=None, force_push_once=False):
+    global SEEN
     if type(tl)!=PostList: tl=PostList(tl)
+    SEEN|={p._id for p in tl}
     if len(tl):
         # print('>',tl)
         tnet = tl.network()
-        nx_g = tnet.graph(local_server=get_srvr_name())
+        local_server = parse_account_name(acct)[-1] if acct else get_srvr_name()
+        nx_g = tnet.graph(local_server=local_server)
         nx_g.remove_nodes_from(
             n 
             for n,d in list(nx_g.nodes(data=True))
@@ -277,11 +335,11 @@ def update_posts(tl, omsg='refreshed', emit_key='get_updates',ids_done=None,unre
 
         omsg = f'{len(nodes)+len(edges)} new updates @ {get_time_str()}'
         if nodes or edges:
-            odata = dict(nodes=nodes, edges=edges, logmsg=omsg, force_push=force_push)
+            odata = dict(nodes=nodes, edges=edges, logmsg=omsg, force_push=force_push, bg=bg, force_push_once=force_push_once)
             # for n in nodes: print('++',n['id'])
             emitt(emit_key, odata)
             # time.sleep(0.1)
-            threading.Event().wait(.1)
+            gevent.sleep(.1)
             return True
     
     # omsg = f'no new updates @ {get_time_str()}'
@@ -294,7 +352,7 @@ def add_context(node_id):
     post = Post(node_id)
     if post:# unread_convo = PostList(p for p in post.convo if not p.is_read)
         convo = post.convo
-        update_posts(convo[:LIM_TIMELINE], force_push=True)
+        update_posts(convo[:LIM_TIMELINE], force_push_once=True)
 
 
 
@@ -329,8 +387,6 @@ def mark_as_read(node_ids):
 
 
 
-
-
 class OpenBrowser(Thread):
     def __init__(self):
         super(OpenBrowser, self).__init__()
@@ -340,7 +396,7 @@ class OpenBrowser(Thread):
     def run(self):
         while self.notResponding():
             # print('Did not respond')
-            threading.Event().wait(0.1)
+            gevent.sleep(0.1)
         # print('Responded')
         webbrowser.open_new(f'http://{HOST}:{PORT}/') 
 
@@ -366,6 +422,7 @@ def main(debug=False, **kwargs):
         pass
     print(WELCOME_MSG)
     try:
+        # socketio.start_background_task(crawl_updates)
         return socketio.run(
             app, 
             debug=debug, 
@@ -373,7 +430,8 @@ def main(debug=False, **kwargs):
             port=PORT,
             host=HOST
         )
-    except (KeyboardInterrupt,EOFError):
+    # except (KeyboardInterrupt,EOFError):
+    except AssertionError:
         print('goodbye')
         exit()
 

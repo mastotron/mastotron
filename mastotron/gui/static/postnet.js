@@ -137,7 +137,7 @@ var network = new vis.Network(container, data, options);
 
 function startnet() {
   console.log('starting network!');
-  socket.emit('start_updates');
+  socket.emit('start_updates', {acct:ACCT});
   request_updates(lim=get_lim_nodes_graph());
 }
 
@@ -309,22 +309,12 @@ function lim_nodes(lim=0) {
 }
 
 function update_nodes(data) {
-  // freeze_nodes();
-  if (data.nodes.length) {
-    nd=data.nodes[0];
-    logmsg('adding post by '+nd.author+' from '+nd.datetime_str_h);
-  }
+  if(!ALREADY_UPDATED){ ALREADY_UPDATED=true; stop_spinner(); }
   nodes.update(data.nodes);
   edges.update(data.edges);
   reinforce_darkmode();
   style_nodes();
-  // unfreeze_nodes();
   style_edges();
-  // lim_nodes();
-  
-  setTimeout(function(){
-    logmsg('currently '+nodes.length.toString()+' posts visible and '+DATA_STACK.length.toString()+' in queue');
-  }, 1000);
 }
 
 function sleep(ms) {
@@ -388,14 +378,14 @@ function style_edges() {
 function style_nodes() {
   repos_nodes();
   size_nodes();
-  // nodes.forEach(function(n) { n.fixed={x: true, y: true} });
-  // for (node_d of iter_nodes_d()) {
-  //   nedges = network.getConnectedEdges(node_d.id);
-  //   if (node_d.num_replies>nedges.length) {
-  //     node_d.color = nodebordercolor;
-  //     node_d.borderWidth=5;
-  //   }
-  // }
+  nodes.forEach(function(n) { n.fixed={x: true, y: true} });
+  for (node_d of iter_nodes_d()) {
+    nedges = network.getConnectedEdges(node_d.id);
+    if (node_d.num_replies>nedges.length) {
+      node_d.color = nodebordercolor;
+      node_d.borderWidth=5;
+    }
+  }
 }
 
 function change_node_color(color) {
@@ -455,6 +445,14 @@ function get_all_plus_stack(feat) {
     });
   });
   return ids;
+}
+
+function get_num_nodes_stack() {
+  i=0;
+  DATA_STACK.forEach(function(d) {
+    i+=d.nodes.length;
+  });
+  return i;
 }
 
 
@@ -606,7 +604,8 @@ function get_our_status_for_updates(lim=0,force_push=false) {
   return {
     'ids_now':get_ids_in_graph_or_stack(), 
     'force_push':force_push, 
-    'lim':lim
+    'lim':lim,
+    'acct':ACCT
   };
 }
 
@@ -617,23 +616,13 @@ function next_batch_of_nodes_please() {
 }
 
 function request_updates(lim=1, force_push=false) {
-  if(BUSY==true){return;}
-  var BUSY = true;
-  ns=DATA_STACK.length.toString();
-  if (force_push | (DATA_STACK.length<=get_lim_nodes_stack())) {
-    if(ns){logmsg('refreshing with '+ns+' posts in queue @ '+get_time_str());}
-    socket.emit(
-      'get_updates', 
-      get_our_status_for_updates(
-        lim=lim,
-        force_push=force_push,
-      )
-    )
-  } else {
-    logmsg('idling with '+ns+' posts in queue @ '+get_time_str());
-    turnover_nodes();
-  }
-  // get_more_nodes();
+  console.log('req updates lim=',lim,'force_push =',force_push);
+  upd=get_our_status_for_updates(
+    lim=lim,
+    force_push=force_push,
+  )
+  socket.emit('get_updates', upd);
+  console.log('get_updates', upd);
 }
 
 function turnover_nodes(force=false) {
@@ -675,7 +664,7 @@ function receive_updates_with_stack(data) {
     update_nodes(data);
     lim_nodes(lim=get_lim_nodes_graph());
   } else {
-    maybe_add_to_stack(data);
+    add_to_stack(data);
   }
   get_more_nodes();
 }
@@ -693,7 +682,7 @@ function receive_updates_showing_latest_n(data) {
     if(nodes.length < get_lim_nodes_graph()) {
       update_nodes(data);
     } else {
-      maybe_add_to_stack(data);
+      add_to_stack(data);
       sort_stack();    
       stacknow = DATA_STACK.slice(0, get_lim_nodes_graph());
       stackids = [];
@@ -717,24 +706,46 @@ function receive_updates_showing_latest_n(data) {
   }
 }
 
+socket.on('bg_get_updates',function(data) {
+  add_to_stack(data);
+})
+function bg_req_updates() {
+  opt=get_our_status_for_updates(lim=10);
+  opt['bg']=true;
+  socket.emit('get_updates', opt);
+}
 
 // GOT UPDATE
 socket.on('get_updates', function(data) {
-  console.log(PAUSE,ALREADY_UPDATED,nodes.length);
-  if(PAUSE & ALREADY_UPDATED & (!data.force_push)){
-    maybe_add_to_stack(data);
-    // receive_updates_with_stack(data);
-  } else {
-    ALREADY_UPDATED=true;
-    stop_spinner();
+
+  // if a "bg" update then add to stack no matter what
+  if(data.bg){ 
+    add_to_stack(data);
+  }
+  
+  // if a "just once" update this is for replies which ought to be shown but not preserved
+  else if(data.force_push_once) {
+    update_nodes(data);  // update directly! don't add to stack!
+  }
+
+  // posts to be shown right away
+  else if(data.force_push){
+    receive_updates_with_stack_pushed(data); // update and add to stack
+  }
+
+  // posts to be shown if there's room
+  else if(get_num_nodes() < get_lim_nodes_graph()){
     receive_updates_with_stack_pushed(data);
+  }
+
+  // everything else in the stack please
+  else {
+    add_to_stack(data);
   }
 });
 
-function maybe_add_to_stack(data) {
-  // if(data.logmsg){logmsg('received '+data.logmsg + '; ' + DATA_STACK.length.toString() + ' in queue');}
-  nn=data.nodes.length;
-  logmsg('received '+nn+' posts with '+ns+' in queue @ '+get_time_str());
+function add_to_stack(data) {
+  while(DATA_STACK.length > (ABS_MAX_NUM_NODES_IN_QUEUE-1)) { DATA_STACK.shift(); }
   DATA_STACK.push(data);
 }
 
@@ -862,15 +873,41 @@ function clear_intervals(){ INTERVALS.forEach(clearInterval); }
 function set_intervals() {
   clear_intervals();
 
-  i1 = setInterval(function() { request_pushes(); }, 100);
-  i2 = setInterval(function() { request_updates(); }, TIME_TIL_UPDATE * 1000);
-  i3 = setInterval(function() { request_updates(lim=0, force_push=true); }, 60 * 1000 * 5); // once every 5 mins a hard ref
-  INTERVALS.push(...[i1,i2,i3]);
+  // background refresh
+  INTERVALS.push(
+    setInterval(
+      bg_req_updates, 
+      60 * 1000
+    )
+  );
+  
+  // simply sifting through the nodes in stack
+  INTERVALS.push(
+    setInterval(
+      function() { turnover_nodes()}, 
+      TIME_TIL_UPDATE * 1000
+    )
+  );
 
+  // nice log msg
+  INTERVALS.push(
+    setInterval(
+      function(){
+        logmsg('currently '+nodes.length.toString()+' posts visible and '+DATA_STACK.length.toString()+' in queue')
+      },
+      1000
+    )
+  );
 }
 
+function secs_since_start() {
+  now = new Date() / 1000;
+  return now - TIME_WHEN_LOADED;
+}
 
+var TIME_WHEN_LOADED=undefined;
 $(document).ready(function(){
+  TIME_WHEN_LOADED = new Date() / 1000;
   reinforce_darkmode();
   set_playpause(get_in_config('pause'));
   if(!ALREADY_UPDATED){set_spinner();}
