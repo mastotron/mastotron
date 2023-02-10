@@ -1,10 +1,10 @@
-# mastotron
+# Mastotron
 
-A new interface to mastodon and other new experiments in social media.
+A new interface to Mastodon, and other experiments in social media.
 
 ## Demo
 
-...
+[![Mastotron](https://www.dropbox.com/s/1ubsu22mpqjemek/Matotron-v1b.png?raw=1)](https://www.dropbox.com/s/rme46j0xl3qmeaw/Mastotron-v1b.mov?raw=1)
 
 ## Installation
 
@@ -36,19 +36,21 @@ A new interface to mastodon and other new experiments in social media.
 
 ## Usage
 
-...
+### Use normally
 
+Follow installation istructions above and then usage instructions inside the program.
 
-## Development
+(More documentation coming.)
 
 
 ### Use in jupyter/python
 
 ```python
-# load the class
 from mastotron import Tron
-# instantiate
-tron = Tron()
-# get latest posts; will guide through auth
-posts = tron.timeline('myaccount@mastodonserver.com')
+me = 'me@myserver.com'
+posts = Tron().timeline(me)
 ```
+
+## Contributing
+
+Please!
