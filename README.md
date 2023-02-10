@@ -31,9 +31,13 @@ https://user-images.githubusercontent.com/733853/217984843-15ae3fdf-2e40-4bca-b4
 
 ### Python
 
-1. First install python. 
-2. In a terminal type: `pip install git+https://github.com/quadrismegistus/mastotron`
-3. In a terminal type: `mastotron`
+1. Open a terminal
+2. Make sure python 3 is installed
+3. Run:
+```
+pip install -U mastotron && mastotron
+```
+4. In the future just run: `mastotron`
 
 
 ## Usage
