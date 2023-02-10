@@ -1,15 +1,13 @@
-import mastotron as pkg
 from setuptools import setup
 from setuptools import find_packages
 pkgs=find_packages(exclude=('tests',))
-print(pkgs)
 with open('README.md') as f: readme=f.read()
 with open('requirements.txt') as f: reqs=[x.strip() for x in f.read().split('\n') if x.strip()]
 
 setup(
-    name=pkg.__name__,
-    version=pkg.__version__,
-    url=f"https://github.com/quadrismegistus/{pkg.__name__}",
+    name='mastotron',
+    version='0.4.4',
+    url=f"https://github.com/quadrismegistus/mastotron",
     license='MIT',
     author="Ryan Heuser",
     author_email="ryan.heuser@princeton.edu",
@@ -35,10 +33,10 @@ setup(
     ],
 
 
-    py_modules=[pkg.__name__],
+    py_modules=['mastotron'],
     entry_points={
         'console_scripts': [
-            f'{pkg.__name__} = cli:cli',
+            f'mastotron = mastotron.cli:cli',
         ],
     },
     package_data={

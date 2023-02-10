@@ -33,6 +33,7 @@ path_templates = os.path.join(path_web,'templates')
 from pprint import pprint, pformat
 import textwrap,random
 import numpy as np
+import click
 from functools import cached_property, lru_cache, total_ordering
 cache = lru_cache(maxsize=None)
 from typing import Optional,Union,Dict,List
