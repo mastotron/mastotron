@@ -20,9 +20,25 @@ https://user-images.githubusercontent.com/733853/217984843-15ae3fdf-2e40-4bca-b4
 
 ### Linux
 
-1. [Download the latest zip file release (`Mastotron-linux.zip`)](https://github.com/quadrismegistus/mastotron/releases/download/v1.0.0/Mastotron-linux.zip)
+<s>1. [Download the latest zip file release (`Mastotron-linux.zip`)](https://github.com/quadrismegistus/mastotron/releases/download/v1.0.0/Mastotron-linux.zip)
 2. Unzip the file to reveal `MastotronApp`
-3. Double-click this and wait for the window to appear
+3. Double-click this and wait for the window to appear</s>
+
+**Update**: The linux binary is working for practically no one! In addition, QT bindings are necessary to install beforehand. I'll work on the binary but in the meantime, this looks like it's working for people as an installation strategy:
+
+```
+# Install QT bindings and pywebview for QT
+sudo apt-get install build-essential libgl1-mesa-dev
+pip3 install pyqt5 pyqtwebengine
+pip3 install pywebview           
+pip3 install pywebview[qt]
+
+# Then install mastotron via pip
+pip install -U mastotron
+
+# Run mastotron (you can just run this step alone next time)
+mastotron
+```
 
 
 ### Windows
