@@ -751,7 +751,7 @@ function add_to_stack(data) {
 
 function sort_stack() {
   // console.log(DATA_STACK);
-  DATA_STACK = DATA_STACK.sort((a,b) => b.nodes[0].timestamp - a.nodes[0].timestamp);
+  DATA_STACK = DATA_STACK.sort((a,b) => a.nodes[0].timestamp - b.nodes[0].timestamp);
 }
 
 function get_more_nodes() {
