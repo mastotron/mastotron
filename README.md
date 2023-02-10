@@ -12,18 +12,15 @@ A new interface to mastodon and other new experiments in social media.
 
 1. [Download the latest zip file release (`Mastotron-macos.zip`)](https://github.com/quadrismegistus/mastotron/releases/download/v1.0.0/Mastotron-macos.zip)
 2. Unzip the file to reveal `Mastotron.app`
-3. Double-click this and wait for a terminal to appear
-4. Wait 30-60sec here until a text-art elephant appears with a URL
-5. Paste this URL,`http://localhost:1789` (which was auto-copied to clipboard) into your browser
-6. Bookmark this URL: it's always `localhost:1789`
+3. Hold control (⌃) and click the file
+4. Click "Open" in the menu, then click "open" again at the prompt ([more info](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unidentified-developer-mh40616/mac))
+5. Wait for the window to appear
 
 ### Linux
 
 1. [Download the latest zip file release (`Mastotron-linux.zip`)](https://github.com/quadrismegistus/mastotron/releases/download/v1.0.0/Mastotron-linux.zip)
 2. Unzip the file to reveal `MastotronApp`
-3. Double-click this and wait for a terminal to appear
-4. Wait 30-60sec here until a text-art elephant appears with a URL
-5. Paste this URL (which was auto-copied to clipboard) into your browser
+3. Double-click this and wait for the window to appear
 
 
 ### Windows
@@ -33,11 +30,8 @@ A new interface to mastodon and other new experiments in social media.
 ### Python
 
 1. First install python. 
-2. In a terminal type: `pip install mastotron`
+2. In a terminal type: `pip install git+https://github.com/quadrismegistus/mastotron`
 3. In a terminal type: `mastotron`
-4. Wait 30-60sec here until a text-art elephant appears with a URL
-5. Paste this URL (auto-copied to clipboard in step 4) into your browser
-
 
 
 ## Usage
