@@ -1,8 +1,5 @@
-# make sure to use eventlet and call eventlet.monkey_patch()
-import eventlet
-eventlet.patcher.monkey_patch(select=True, socket=True)
-
 from mastotron.imports import *
+from mastotron.gui.app import *
 import click
 
 #!/usr/bin/env python3
@@ -19,8 +16,7 @@ def cli(web=False,code=False):
         ])
         return os.system(cmd)
 
-    from mastotron.gui import app
-    return app.mainview()
+    mainview()
     
 
 

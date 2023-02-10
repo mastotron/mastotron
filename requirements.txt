@@ -16,3 +16,5 @@ gevent-websocket
 pyperclip
 tqdm
 simple-websocket
+pywebview
+screeninfo

@@ -11,6 +11,7 @@ from mastotron import __version__ as vnum
 ## external imports
 import socket,time,webbrowser,signal
 import gevent
+import webview
 import threading
 from engineio.payload import Payload
 Payload.max_decode_packets = 500
@@ -209,10 +210,11 @@ class NodeListener(StreamListener):
 
 @socketio.event
 def start_updates(data={}):
-    print('!!! starting updates !!!')
+    # print('!!! starting updates !!!')
     acct = get_acct_name(data)
-    # start_crawler(acct)
-    # start_listener(acct)
+    start_listener(acct)
+    gevent.sleep(30)
+    start_crawler(acct)
     
 def start_crawler(acct):
     if not acct: return
@@ -263,11 +265,9 @@ class Crawler():
 
 @socketio.event
 def get_updates(data={}):
-    print('get_updates')
     global SEEN
-    acct = get_acct_name()
+    acct = get_acct_name(data)
     if not acct: return
-    print(acct)
     SEEN|=set(data.get('ids_now',[]))
     lim = data.get('lim') if data.get('lim') else get_config().get('LIM_NODES_STACK')
     force_push = data.get('force_push',False)
@@ -411,8 +411,10 @@ def view(**kwargs):
     OpenBrowser().start()
 
 def mainview(**kwargs):
-    view(**kwargs)
-    main(**kwargs)
+    # view(**kwargs)
+    # main(**kwargs)
+    browse(app = app, func = main)
+
 
 def main(debug=False, **kwargs): 
     try:
@@ -423,6 +425,7 @@ def main(debug=False, **kwargs):
     print(WELCOME_MSG)
     try:
         # socketio.start_background_task(crawl_updates)
+        # socketio.start_background_task(browse, app=app)
         return socketio.run(
             app, 
             debug=debug, 
@@ -434,5 +437,40 @@ def main(debug=False, **kwargs):
     except AssertionError:
         print('goodbye')
         exit()
+
+
+
+def browse(app=None,**kwargs):
+    try:
+        from screeninfo import get_monitors
+        m = get_monitors()[0]
+        width = m.width
+        height = m.height
+    except Exception:
+        width = 1400
+        height = 1100
+
+    with app.app_context():
+        gevent.sleep(1)
+        webview.create_window(
+            title=f'Mastotron {vnum}', 
+            url=f'http://{HOST}:{PORT}',
+            fullscreen=False,
+            width=width,
+            height=height,
+            min_size=(400,300),
+            frameless=False,
+            easy_drag=True,
+            text_select=True,
+            confirm_close=True,
+        )
+        return webview.start(
+            private_mode=False,
+            storage_path=path_srvr,
+            debug=True,
+            **kwargs
+        )
+
+
 
 if __name__=='__main__': mainview(debug=False)

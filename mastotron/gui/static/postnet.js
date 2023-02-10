@@ -628,7 +628,7 @@ function request_updates(lim=1, force_push=false) {
 function turnover_nodes(force=false) {
   if(PAUSE & !force){return;}
   // sort_stack();
-  res = DATA_STACK.shift();
+  res = DATA_STACK.pop();
   if(res) {
     update_nodes(res);
     lim_nodes();
@@ -893,7 +893,9 @@ function set_intervals() {
   INTERVALS.push(
     setInterval(
       function(){
-        logmsg('currently '+nodes.length.toString()+' posts visible and '+DATA_STACK.length.toString()+' in queue')
+        if(nodes.length) {
+          logmsg('currently '+nodes.length.toString()+' posts visible and '+DATA_STACK.length.toString()+' in queue');
+        }
       },
       1000
     )
