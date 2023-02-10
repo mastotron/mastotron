@@ -6,6 +6,8 @@ A new interface to Mastodon, and other experiments in social media.
 
 [![Mastotron](https://www.dropbox.com/s/1ubsu22mpqjemek/Matotron-v1b.png?raw=1)](https://www.dropbox.com/s/rme46j0xl3qmeaw/Mastotron-v1b.mov?raw=1)
 
+https://www.dropbox.com/s/rme46j0xl3qmeaw/Mastotron-v1b.mov?raw=1
+
 ## Installation
 
 ### MacOS
