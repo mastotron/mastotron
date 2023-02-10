@@ -1,8 +1,8 @@
-from mastotron.imports import *
-from mastotron.gui.app import *
-import click
-
 #!/usr/bin/env python3
+
+from .imports import *
+from .gui.app import *
+
 
 @click.command()
 @click.option('-w','--web', is_flag=True, show_default=True, default=False,help='Run as local web server')
@@ -18,6 +18,5 @@ def cli(web=False,code=False):
 
     mainview()
     
-
 
 if __name__=='__main__': cli()
