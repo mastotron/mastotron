@@ -5,9 +5,10 @@ from .gui.app import *
 
 
 @click.command()
-@click.option('-w','--web', is_flag=True, show_default=True, default=False,help='Run as local web server')
-@click.option('-c','--code', is_flag=True, show_default=True, default=False,help='Run in ipython terminal')
-def cli(web=False,code=False):
+@click.option('--gui', is_flag=True, show_default=True, default=False,help='Run embedded in a mini-browser')
+@click.option('--bg', is_flag=True, show_default=True, default=False,help='Run in background (use your browser)')
+@click.option('--code', is_flag=True, show_default=True, default=False,help='Run in ipython terminal')
+def cli(gui=False,bg=False,code=False):
     if code:
         imp='from mastotron import *'
         cmd = ' && '.join([
@@ -16,7 +17,11 @@ def cli(web=False,code=False):
         ])
         return os.system(cmd)
 
-    mainview()
+    elif bg:
+        main()
+
+    else:
+        mainview()
     
 
 if __name__=='__main__': cli()
