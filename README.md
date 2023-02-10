@@ -4,7 +4,7 @@ A new interface to Mastodon, and other experiments in social media.
 
 ## Demo
 
-[![Mastotron](https://www.dropbox.com/s/4181ct6me7s4p4h/Mastotron-v1c.gif?raw=1)](https://www.dropbox.com/s/efbomm59pdv9m2d/Mastotron-v1c.mov?dl=0)
+[![Mastotron](mastotron/gui/static/preview.gif)](https://www.dropbox.com/s/efbomm59pdv9m2d/Mastotron-v1c.mov?dl=0)
 
 ## Installation
 
