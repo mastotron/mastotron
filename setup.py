@@ -36,7 +36,7 @@ setup(
     py_modules=['mastotron'],
     entry_points={
         'console_scripts': [
-            f'mastotron = cli:cli',
+            f'mastotron = mastotron.cli:cli',
         ],
     },
     package_data={
