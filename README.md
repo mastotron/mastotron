@@ -34,7 +34,7 @@ pip3 install pywebview
 pip3 install pywebview[qt]
 
 # Then install mastotron via pip
-pip install -U mastotron
+pip3 install -U mastotron
 
 # Run mastotron (you can just run this step alone next time)
 mastotron
@@ -51,7 +51,7 @@ mastotron
 2. Make sure python 3 is installed
 3. Run:
 ```
-pip install -U mastotron && mastotron
+pip3 install -U mastotron && mastotron
 ```
 4. In the future just run: `mastotron`
 
