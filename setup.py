@@ -6,7 +6,7 @@ with open('requirements.txt') as f: reqs=[x.strip() for x in f.read().split('\n'
 
 setup(
     name='mastotron',
-    version='0.4.4',
+    version='0.4.5',
     url=f"https://github.com/quadrismegistus/mastotron",
     license='MIT',
     author="Ryan Heuser",
