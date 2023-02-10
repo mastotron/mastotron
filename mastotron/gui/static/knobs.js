@@ -1,5 +1,5 @@
 var ALREADY_UPDATED=false;
-
+const ABS_MAX_NUM_NODES_IN_QUEUE = 200;
 var darkbgcolor = '#060718'; //'rgb(20,20,23)'; //#28282B';
 var lightbgcolor = '#F5F5ED';
 var lighttweetbg = 'white';
@@ -16,7 +16,7 @@ var lightbgimg = '/static/dalle3-small.png';
 
 var PAUSE=false;
 var TIME_TIL_UPDATE = 5;
-var TIME_TIL_MOVED = 1;
+var TIME_TIL_MOVED = .5;
 
 
 var pb = new PromptBoxes({toasts: {duration: 2500, allowClose: true}});
