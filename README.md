@@ -20,7 +20,9 @@ https://user-images.githubusercontent.com/733853/217984843-15ae3fdf-2e40-4bca-b4
 
 ### Linux
 
-**UPDATE 2**: There are apparently complex QT/GTK windowing issues that will take time to resolve. In the meantime, try installing and running Mastotron in background mode (just added):
+**UPDATE 2**: The builtin mini browser isn't working for
+linux users; in the meantime you can use your own browser
+and point it to mastotron running in the background. Like so:
 
 ```
 # install (do just once)
