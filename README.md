@@ -147,7 +147,7 @@ Code [here](https://github.com/quadrismegistus/mastotron/blob/main/mastotron/mas
 
 ### Backend to the backend to the backend 
 
-Code [here](https://github.com/quadrismegistus/mastotron/blob/main/mastotron/post.py) mainly.
+Code [here](https://github.com/quadrismegistus/mastotron/blob/main/mastotron/post.py) and [here](https://github.com/quadrismegistus/mastotron/blob/main/mastotron/db.py) mainly.
 
 Mastodon is weird. Sorry. I'm new to it. The account and post URIs it gives you are relative to your local server but there is no simple way to translate between URIs and ones on the server for the account it posted from. This is a problem for understanding relations between posts across URIs:
 * If post-A-from-server-X is a reply to post-B-from-server-Y, then in order to load _other_ replies to post-B-on-server-Y (such as post-C-from-server-Z) you need to [ask server Y for the "context" of post B](https://docs.joinmastodon.org/entities/Context/).
