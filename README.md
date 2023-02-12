@@ -103,14 +103,13 @@ There are a few different processes happening once you boot up:
 1. The backend (written in python) makes sure you're logged in and the account name is set locally: if not, it redirects you to the login page.
 2. Once the frontend (written in javascript) boots up, it sends a request to the backend for `N` posts (set by `#` button on lefthand side)
 3. Once the backend hears from the frontend, it starts up a few processes:
-    * A separate 'listener' thread is created which connects to your mastodon server's Streaming API for real-time brand-new push updates
-    * A separate 'crawler' thread which, after a 60 second delay, will request the last 10 posts from your mastodon server
-        * This is a separate thread so your communication with the mastodon server about the latest posts is kept separate from the normal request operations
-    * Then the next, normal request operation is performed
+    * A separate 'listener' thread is created which connects to your mastodon server's [Streaming API](https://docs.joinmastodon.org/methods/streaming/) for real-time brand-new push updates
+    * A separate 'crawler' thread which, after a 60 second delay, will request the last 10 posts from your mastodon server every 60 seconds. (This is a separate thread so your communication with the mastodon server about the latest posts is kept separate from the normal request operations)
+    * Then the next, normal request operation is performed:
 4. Whenever the backend is asked for updates, it starts iterating backwards over 5-minute intervals, starting from now and rounding down (if it's 5:43pm, it starts at 5:35-5:40, then 5:30-35, and so n)
-    * For each of these 5 minute interval, it either...
-        * requests your mastodon account's server for any timeline post in that 5-minute interval; then caches the result
-        * or, if that 5-minute interval was requested previously and cached, it returns the result it's cached
+    * For each of these 5 minute intervals, it either...
+        * requests your mastodon account's server for any timeline post in that 5-minute interval, and then caches the result
+        * or, if that 5-minute interval was requested previously and cached, it returns the cached result
     * As these results come in, it pushes each one immediately to the frontend
 5. Whenever the frontend receives a new post from the backend, it thinks through these steps:
     * Do I have as many nodes in the graph right now as I want to (set by `#` on lefthand side)?
@@ -125,7 +124,7 @@ There are a few different processes happening once you boot up:
         * (For now, this queue stores a maximum 200 posts; the most recent 200 sent from the backend are preserved)
 6. In addition, every X seconds (set by the `⟤` button on the left-hand side), `turnover_nodes()` occurs
     * This just brings in the latest addition to the queue into the graph, booting back into the queue the least recent post on the graph
-        * Crucially, this means that you are not querying your mastodon server every X seconds: it's just a front-end animation
+        * Crucially, this means that _you are not querying your mastodon server every X (default: 5) seconds_: it's just a front-end animation
     * When active, tou can turn this animatin off by pressing the `■` on the left-hand side; when paused you can re-activate it by pressing the `▶` key
 7. Finally, every 60 seconds an update is requested from the server, which will follow the logic of step 4
 
