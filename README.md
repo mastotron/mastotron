@@ -5,7 +5,7 @@
 <i>Mastotron mascot by DALL-E</i>
 </p>
 
-Mastotron is a different interface to [Mastodon](github.com/mastodon/mastodon), replacing the mindless "feed" of most social media with a network map of conversations and recent and popular posts.
+[Mastotron](https://mas.to/@mastotron) is a different interface to [Mastodon](github.com/mastodon/mastodon), replacing the mindless "feed" of most social media with a network map of conversations and recent and popular posts.
 
 ## Demo
 
