@@ -125,8 +125,8 @@ There are a few different processes happening once you boot up:
 6. In addition, every X seconds (set by the `⟤` button on the left-hand side), `turnover_nodes()` occurs
     * This just brings in the latest addition to the queue into the graph, booting back into the queue the least recent post on the graph
         * Crucially, this means that _you are not querying your mastodon server every X (default: 5) seconds_: it's just a front-end animation
-    * When active, tou can turn this animatin off by pressing the `■` on the left-hand side; when paused you can re-activate it by pressing the `▶` key
-7. Finally, every 60 seconds an update is requested from the server, which will follow the logic of step 4
+    * When the turnover animation is active, you can turn it off by pressing the `■` on the left-hand side; when paused, you can re-activate it by pressing the `▶` key.
+7. Finally, every 60 seconds an update is requested from the server, which will follow the logic of step 4 above.
 
 Now that I've typed this all out I can see it's a bit over-complicated. I've created an [issue here](https://github.com/quadrismegistus/mastotron/issues/20) if you have thoughts on how to simplify it.
 
