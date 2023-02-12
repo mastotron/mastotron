@@ -151,13 +151,13 @@ Code [here](https://github.com/quadrismegistus/mastotron/blob/main/mastotron/pos
 
 Mastodon is weird. Sorry. I'm new to it. The account and post URIs it gives you are relative to your local server but there is no simple way to translate between URIs and ones on the server for the account it posted from. This is a problem for understanding relations between posts across URIs:
 * If post-A-from-server-X is a reply to post-B-from-server-Y, then in order to load _other_ replies to post-B-on-server-Y (such as post-C-from-server-Z) you need to [ask server Y for the "context" of post B](https://docs.joinmastodon.org/entities/Context/).
-* Server Y will then give you a bunch of IDs _will make sense only to server Y_: 
+* Server Y will then give you a bunch of IDs _which make sense only to server Y_: 
     * Server X (where our user is located) has no idea what they mean!
     * Server Z (where the author of the reply is located) _also_ has no idea what they mean!
 
-Mastotron tries hard to figure all this out by storing post URLs and their relations in a mini graph database known as [cogdb](https://github.com/arun1729/cog). Here a node is any post URL, on any server, which may have relations with other post URLs including `REL_IS_LOCAL_FOR` (is a local URL for the URL of the post), `REL_IS_BOOST_OF`, and `REL_IS_REPLY_TO` (self-explanatory).
+Mastotron tries hard to figure all this out by storing post URLs and their relations in a mini graph database known as [cogdb](https://github.com/arun1729/cog). Here a node is any post URL, on any server, which may have relations with other post URLs including `IS_LOCAL_FOR` (is a local URL for the URL of the post), `IS_BOOST_OF`, and `IS_REPLY_TO` (self-explanatory).
 
-That way it's possible to ask of any post, what posts have replied to me, even if the replies are expressed in IDs across different servers. (It does that in graph-speak by asking what incoming edges both the local URL of a post and its URL on its own server have.) Which posts have boosted me? And so on. All those facts are discovered in a few different ways each of which returns IDs from different servers (a post which is a reply will give you a reply ID from the timeline server, but the context API will give you an ID from the poster's server, etc). Because of that, I thought it'd be better to store those facts in a graph database so you can ask questions like this with minimal querying of mastodon.
+That way it's possible to ask of any post, what posts have replied to me, even if the replies are expressed in IDs across different servers. (It does that in graph-speak by asking what incoming edges both the local URL of a post and its "remote" URL on its own server have.) Which posts have boosted me? And so on. All those facts are discovered in a few different ways each of which returns IDs from different servers (e.g., as described above, a post which is a reply will give you a reply ID from the timeline server but the context API will give you an ID from the poster's server, etc). Because of that, I thought it'd be better to store those facts in a graph database so you can ask questions like "who replied to this post" with minimal querying of mastodon.
 
 ## Contributing
 
