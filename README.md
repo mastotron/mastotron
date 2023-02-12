@@ -48,7 +48,7 @@ Maybe one day we could make a mobile app, though the graphical interface would p
 
 Thankfully double-click installation is working here, though you'll need to convince MacOS to open an app from an "unidentified developer" ([more info](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unidentified-developer-mh40616/mac)). 
 
-1. [Download the latest zip file release (`Mastotron-macos.zip`)](https://github.com/quadrismegistus/mastotron/releases/download/v1.0.0/Mastotron-macos.zip)
+1. [Download the latest zip file release (`Mastotron-macos.zip`)](https://github.com/mastotron/mastotron/releases/download/v1.0.0/Mastotron-macos.zip)
 2. Unzip the file to reveal `Mastotron.app`
 3. Hold control (⌃) and click the file; click "Open" in the menu; then click "open" again at the prompt
     * If this doesn't work, try going to System Preferences->Security and "allow" it to run.
@@ -63,7 +63,7 @@ with mastotron running in the background:
 
 ```
 # install (do just once)
-pip3 install -U git+https://github.com/quadrismegistus/mastotron
+pip3 install -U git+https://github.com/mastotron/mastotron
 
 # run
 mastotron --bg
@@ -129,26 +129,26 @@ There are a few different processes happening once you boot up:
     * When the turnover animation is active, you can turn it off by pressing the `■` on the left-hand side; when paused, you can re-activate it by pressing the `▶` key.
 7. Finally, every 60 seconds an update is requested from the server, which will follow the logic of step 4 above.
 
-Now that I've typed this all out I can see it's a bit over-complicated. I've created an [issue here](https://github.com/quadrismegistus/mastotron/issues/20) if you have thoughts on how to simplify it.
+Now that I've typed this all out I can see it's a bit over-complicated. I've created an [issue here](https://github.com/mastotron/mastotron/issues/20) if you have thoughts on how to simplify it.
 
 ## Technical details
 
 ### Frontend
 
-Code [here](https://github.com/quadrismegistus/mastotron/blob/main/mastotron/gui/static/postnet.js) mainly. It's my (simple but probably clunky) javascript adaptation of [visjs](https://github.com/visjs) to display the nodes and edges and labels and images of the posts.
+Code [here](https://github.com/mastotron/mastotron/blob/main/mastotron/gui/static/postnet.js) mainly. It's my (simple but probably clunky) javascript adaptation of [visjs](https://github.com/visjs) to display the nodes and edges and labels and images of the posts.
 
 ### Backend
 
-Code [here](https://github.com/quadrismegistus/mastotron/blob/main/mastotron/gui/app.py). Running [flask](https://github.com/pallets/flask) and communicating with the front-end via HTTP (only to serve the initial HTML and CSS and javascript) and subsequently via realtime web sockets (through [flask-socketio](https://github.com/miguelgrinberg/Flask-SocketIO)).
+Code [here](https://github.com/mastotron/mastotron/blob/main/mastotron/gui/app.py). Running [flask](https://github.com/pallets/flask) and communicating with the front-end via HTTP (only to serve the initial HTML and CSS and javascript) and subsequently via realtime web sockets (through [flask-socketio](https://github.com/miguelgrinberg/Flask-SocketIO)).
 
 
 ### Backend to the backend
 
-Code [here](https://github.com/quadrismegistus/mastotron/blob/main/mastotron/mastotron.py) mainly. This interfaces with [mastodon.py](https://github.com/halcy/Mastodon.py) (which is a python implementation of the [Mastodon API](https://docs.joinmastodon.org/api/)) to read and cache posts from your timeline. Mastotron's only innovation here is laid out in step 4 of the section above, which is to query for 5 minute intervals and cache the results; this ensures minimal requests to your mastodon server.
+Code [here](https://github.com/mastotron/mastotron/blob/main/mastotron/mastotron.py) mainly. This interfaces with [mastodon.py](https://github.com/halcy/Mastodon.py) (which is a python implementation of the [Mastodon API](https://docs.joinmastodon.org/api/)) to read and cache posts from your timeline. Mastotron's only innovation here is laid out in step 4 of the section above, which is to query for 5 minute intervals and cache the results; this ensures minimal requests to your mastodon server.
 
 ### Backend to the backend to the backend 
 
-Code [here](https://github.com/quadrismegistus/mastotron/blob/main/mastotron/post.py) and [here](https://github.com/quadrismegistus/mastotron/blob/main/mastotron/db.py) mainly.
+Code [here](https://github.com/mastotron/mastotron/blob/main/mastotron/post.py) and [here](https://github.com/mastotron/mastotron/blob/main/mastotron/db.py) mainly.
 
 Mastodon is weird. Sorry. I'm new to it. The account and post URIs it gives you are relative to your local server but there is no simple way to translate between URIs and ones on the server for the account it posted from. This is a problem for understanding relations between posts across URIs:
 * If post-A-from-server-X is a reply to post-B-from-server-Y, then in order to load _other_ replies to post-B-on-server-Y (such as post-C-from-server-Z) you need to [ask server Y for the "context" of post B](https://docs.joinmastodon.org/entities/Context/).
@@ -162,6 +162,6 @@ That way it's possible to ask of any post, what posts have replied to me, even i
 
 ## Contributing
 
-Please do! You can report bugs and ask questions on the [issues](https://github.com/quadrismegistus/mastotron/issues) page. Pull requests are always welcome and encouraged.
+Please do! You can report bugs and ask questions on the [issues](https://github.com/mastotron/mastotron/issues) page. Pull requests are always welcome and encouraged.
 
 I'm going to move this repository to an organization to further encourage outside contributions. I'm thrilled Mastotron has received interest and I'd love for it to be a collective open source endeavor as much as posssible!
