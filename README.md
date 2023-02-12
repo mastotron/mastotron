@@ -134,7 +134,7 @@ Now that I've typed this all out I can see it's a bit over-complicated. I've cre
 
 ### Frontend
 
-Code [here](https://github.com/quadrismegistus/mastotron/blob/main/mastotron/gui/static/postnet.js) mainly. It's my (simple but probably clunky) javascript adaptation of [https://github.com/visjs](https://github.com/visjs) to display the nodes and edges and labels and images of the posts.
+Code [here](https://github.com/quadrismegistus/mastotron/blob/main/mastotron/gui/static/postnet.js) mainly. It's my (simple but probably clunky) javascript adaptation of [visjs](https://github.com/visjs) to display the nodes and edges and labels and images of the posts.
 
 ### Backend
 
