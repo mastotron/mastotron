@@ -40,7 +40,7 @@ https://user-images.githubusercontent.com/733853/217984843-15ae3fdf-2e40-4bca-b4
 
 ## Installation
 
-Right now Mastodon is a desktop application rather than a website you can navigate to right away. This is primarily so that the (already minimal) data it collects stays entirely on your hardware rather than on a server somewhere. That makes it safer and free to run: no server costs, no risk of hacking, etc. 
+Right now Mastodon is a desktop application rather than a website you can navigate to right away. This is primarily so that the (already minimal) data it collects stays entirely on your hardware rather than on a server somewhere. That makes it safer and free to run: no server costs, less risk of hacking, etc. 
 
 Maybe one day we could make a mobile app, though the graphical interface would probably need to be redesigned.
 
