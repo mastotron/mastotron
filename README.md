@@ -52,6 +52,7 @@ Thankfully double-click installation is working here, though you'll need to conv
 2. Unzip the file to reveal `Mastotron.app`
 3. Hold control (⌃) and click the file; click "Open" in the menu; then click "open" again at the prompt
     * If this doesn't work, try going to System Preferences->Security and "allow" it to run.
+    * If this doesn't work, try moving the app to your /Applications folder. (Feel free to do that regardless.)
 4. Wait for the window to appear (this is slow; could take a minute+)
 
 ### Linux
