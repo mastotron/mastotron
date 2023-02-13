@@ -46,7 +46,7 @@ Maybe one day we could make a mobile app, though the graphical interface would p
 
 ### MacOS
 
-Thankfully double-click installation is working here, though you'll need to convince MacOS to open an app from an "unidentified developer" ([more info](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unidentified-developer-mh40616/mac)). 
+Thankfully installation is working normally here, though you'll need to convince MacOS to open an app from an "unidentified developer" ([more info](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unidentified-developer-mh40616/mac)). 
 
 1. [Download the latest zip file release (`Mastotron-macos.zip`)](https://github.com/mastotron/mastotron/releases/download/v1.0.0/Mastotron-macos.zip)
 2. Unzip the file to reveal `Mastotron.app`
