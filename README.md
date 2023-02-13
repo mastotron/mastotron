@@ -61,19 +61,33 @@ As of Release v1, the builtin mini browser isn't working for
 linux users, but it works just as fine in your own browser
 with mastotron running in the background:
 
+1. Install python
+2. Install mastotron via pip (run just once):
 ```
-# install (do just once)
 pip3 install -U git+https://github.com/mastotron/mastotron
-
-# run
+```
+3. Run
+```
 mastotron --bg
 ```
-
-Then, in your favorite browser, navigate to [http://localhost:1789](http://localhost:1789).
+4. Then, in your favorite browser, navigate to [http://localhost:1789](http://localhost:1789).
 
 ### Windows
 
-... Coming soon. For now, try following instructions above for Linux.
+Like linux, so far you'll have to run mastotron in the background and then use your own browser to view it:
+
+1. Install [Miniconda3](https://docs.conda.io/en/latest/miniconda.html)
+2. Open up Anaconda Powershell Prompt from the Start menu
+3. Install by pasting in this:
+```
+pip3 install -U git+https://github.com/mastotron/mastotron
+```
+4. Then run Mastotron by typing:
+```
+mastotron --bg
+```
+5. Then, in your favorite browser, navigate to [http://localhost:1789](http://localhost:1789).
+
 
 ## Usage
 
