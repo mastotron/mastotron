@@ -28,7 +28,7 @@ log.setLevel(logging.ERROR)
 
 
 ## constants
-MAX_UPDATE=15
+MAX_UPDATE=25
 CRAWL_LIM=10
 CRAWL_WAIT_SEC=60
 SEEN=set()
@@ -214,7 +214,7 @@ def start_updates(data={}):
     acct = get_acct_name(data)
     start_listener(acct)
     gevent.sleep(30)
-    start_crawler(acct)
+    # start_crawler(acct)      # OVERKILL?
     
 def start_crawler(acct):
     if not acct: return
@@ -241,12 +241,15 @@ class Crawler():
     def crawl(self, lim=CRAWL_LIM, sec_between=.1):
         global SEEN
         if not self.on: return
-        iterr=Tron().timeline_iter(self.acct, seen=SEEN, max_mins=60*24, lim=lim)
-        for i,post in enumerate(iterr):
-            if not self.on: return
-            print(i,post)
-            update_posts([post], acct=self.acct, bg=True)
-            gevent.sleep(sec_between)
+        tl=Tron().timeline(self.acct, seen=SEEN, max_mins=60*24, lim=lim)
+        update_posts(tl, acct=self.acct)
+        gevent.sleep(sec_between)
+        # iterr=Tron().timeline_iter(self.acct, seen=SEEN, max_mins=60*24, lim=lim)
+        # for i,post in enumerate(iterr):
+        #     if not self.on: return
+        #     print(i,post)
+        #     update_posts([post], acct=self.acct, bg=True)
+        #     gevent.sleep(sec_between)
     
     def wait(self, sec=CRAWL_WAIT_SEC):
         if not self.on: return
@@ -287,7 +290,7 @@ def get_updates(data={}):
         only_latest=only_latest
     )
     # update_posts(tl, ids_done=SEEN, force_push=force_push)
-    # SEEN|={p._id for post in tl for p in post.allcopies}
+    
     posts=[]
     for i,post in enumerate(iterr):
         if len(posts) < lim:
@@ -296,13 +299,12 @@ def get_updates(data={}):
             else:
                 logmsg(f'found: {post} ({post.datetime_str_h})')
             posts.append(post)
-
             update_posts([post], ids_done=SEEN, force_push=force_push, bg=bg, acct=acct)
+            SEEN|={p._id for p in post.allcopies}
         else:
             break
     
     # update_posts(posts, ids_done=SEEN, force_push=force_push, bg=bg)
-    SEEN|={p._id for post in posts for p in post.allcopies}
 
         # update_posts(
         #     [post],
@@ -319,6 +321,8 @@ def update_posts(tl, omsg='refreshed', emit_key='get_updates',ids_done=None,unre
     SEEN|={p._id for p in tl}
     if len(tl):
         # print('>',tl)
+        for post in tl:
+            print('++',post.datetime_str_h,post)
         tnet = tl.network()
         local_server = parse_account_name(acct)[-1] if acct else get_srvr_name()
         nx_g = tnet.graph(local_server=local_server)
@@ -336,7 +340,6 @@ def update_posts(tl, omsg='refreshed', emit_key='get_updates',ids_done=None,unre
         omsg = f'{len(nodes)+len(edges)} new updates @ {get_time_str()}'
         if nodes or edges:
             odata = dict(nodes=nodes, edges=edges, logmsg=omsg, force_push=force_push, bg=bg, force_push_once=force_push_once)
-            # for n in nodes: print('++',n['id'])
             emitt(emit_key, odata)
             # time.sleep(0.1)
             gevent.sleep(.1)
@@ -351,8 +354,9 @@ def add_context(node_id):
     # print('add_context',node_id)
     post = Post(node_id)
     if post:# unread_convo = PostList(p for p in post.convo if not p.is_read)
-        convo = post.convo
-        update_posts(convo[:LIM_TIMELINE], force_push_once=True)
+        convo = post.convo[:LIM_TIMELINE]
+        for p in convo[1:]: p.is_tmp=True
+        update_posts(convo, force_push_once=True)
 
 
 

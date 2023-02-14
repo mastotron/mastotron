@@ -1,6 +1,6 @@
 // vars
 
-
+const TIME_BG_UPDATE=60
 var BUSY=false;
 var FIXED = {x:false,y:false}
 var MODE = 'default';
@@ -184,18 +184,17 @@ function get_node(params) {
 
 
 // SHOW
-function show_status_div(params) {
-  node_d = get_node(params);
+function show_status_div(node_d) {
   node_pos = network.getPosition(node_d.id);
   node_pos_web = network.canvasToDOM(node_pos);
-  _offset = 10;
+  _offset = 0;
   $('#tweet').html(node_d['html']);  
   x = node_pos_web['x'];
   y = node_pos_web['y'];
   $('#tweet').offset(
     { 
-      top: y + _offset, 
-      left: x + _offset
+      top: y, 
+      left: x + 90
       // top:_offset,
       // right:0
     });
@@ -248,7 +247,13 @@ function del_nodes(node_ids) {
   }
 }
 
+function just_remove_from_network(node_d) {
+  nodes.remove(node_d.id);
+}
+
 function swap_back_into_stack(node_d) {
+  if(node_d.is_tmp) { return just_remove_from_network(node_d); }
+
   edgel=[];
   network.getConnectedEdges(node_d.id).forEach(function(edge_id) {
       edgel.push(edges.get(edge_id));
@@ -293,28 +298,23 @@ function lim_nodes(lim=0) {
   if(lim==0){lim=get_lim_nodes_graph();}
   if (nodes.length > lim) {
     console.log('<< lim_nodes',lim,'num nodes',nodes.length);
-
-    todel=[];
-    // toadd=[];
-    iter_nodes_d().slice(0,nodes.length - lim).forEach(
-      function(n){ 
-        // todel.push(n.id); 
-        console.log(n.id);
-        swap_back_into_stack(n);
-      }
-    );
-    // nodes.remove(todel);
+    iter_nodes_d().slice(0,nodes.length - lim).forEach(swap_back_into_stack);
     console.log('>> lim_nodes',lim,'num nodes',nodes.length);
   }
 }
 
-function update_nodes(data) {
+function update_nodes(data, make_active=false) {
   if(!ALREADY_UPDATED){ ALREADY_UPDATED=true; stop_spinner(); }
   nodes.update(data.nodes);
   edges.update(data.edges);
   reinforce_darkmode();
   style_nodes();
   style_edges();
+  if(make_active & data.nodes.length){
+    for (let step = 1; step < 100; step++) {
+      setTimeout(function(){ show_status_div(data.nodes[0]); }, step * 10);
+    }
+  }
 }
 
 function sleep(ms) {
@@ -535,9 +535,9 @@ let OK_TO_DEL_ON_BLUR = false;
 network.on("hoverNode", function (params) {
   node_d = get_node(params);
   network.selectNodes([node_d.id]); 
-  show_status_div(params);
-  setTimeout(function(){show_status_div(params);}, 1);
-  setTimeout(function(){show_status_div(params);}, 5);
+  show_status_div(node_d);
+  setTimeout(function(){show_status_div(node_d);}, 1);
+  setTimeout(function(){show_status_div(node_d);}, 5);
 });
 
 network.on("blurNode", function (params) {
@@ -625,13 +625,29 @@ function request_updates(lim=1, force_push=false) {
   console.log('get_updates', upd);
 }
 
-function turnover_nodes(force=false) {
-  if(PAUSE & !force){return;}
-  // sort_stack();
-  res = DATA_STACK.pop();
+function update_and_lim_nodes(res, make_active=false){
   if(res) {
-    update_nodes(res);
+    update_nodes(res, make_active=make_active);
     lim_nodes();
+  }
+}
+
+function move_latest_post_in_stack_to_network() {
+  update_and_lim_nodes(
+    pop_latest_from_stack()
+  )
+}
+
+function is_a_node_selected() {
+  return (network.getSelectedNodes().length>0)
+}
+
+function turnover_nodes(force=false) {
+  if(!PAUSE | force) {
+    update_and_lim_nodes(
+      pop_random_from_stack(),
+      make_active=!(is_a_node_selected())
+    )
   }
 }
 
@@ -755,16 +771,22 @@ function sort_stack() {
   DATA_STACK = DATA_STACK.sort((a,b) => a.nodes[0].timestamp - b.nodes[0].timestamp);
 }
 
-function get_latest_post_in_stack() {
+function pop_random_from_stack() {
+  i = Math.floor(Math.random() * DATA_STACK.length);
+  data = DATA_STACK.splice(i, 1)[0];
+  return data;
+}
+
+function pop_latest_from_stack() {
   sort_stack();
-  turnover_nodes(force=true);
+  return DATA_STACK.pop();
 }
 
 function get_more_nodes() {
   newdata={nodes:[], edges:[]};
   var i=0;
   while ((DATA_STACK.length > 0) && ((nodes.length+newdata.nodes.length) < get_lim_nodes_graph())) {
-    data = DATA_STACK.pop()
+    data = pop_random_from_stack();
     newdata.nodes.push(...data.nodes);
     newdata.edges.push(...data.edges);
     i=i+1;
@@ -786,28 +808,28 @@ $(document).on('keydown', function (event) {
     network.unselectAll();
     hide_status_div();
         
-  } else if (event.ctrlKey | event.metaKey) {
+  // } else if (event.ctrlKey | event.metaKey) {
 
-    if (event.which==82) {  // command r
-      event.preventDefault();
-      request_updates(lim=10, force_push=true);
-    }
+  //   if (event.which==82) {  // command r
+  //     event.preventDefault();
+  //     request_updates(lim=10, force_push=true);
+  //   }
 
   } else if (event.which==82) {  // r
-    request_updates(lim=3, force_push=true);
+    request_updates(lim=5, force_push=true);
   
   } else if (event.which==68) {  // d
     network.getSelectedNodes().forEach(del_node);
 
   } else if (event.which==76) {  // l
-    get_latest_post_in_stack()
+    move_latest_post_in_stack_to_network()
     
   } else if (event.which==77) { // m
     network.getSelectedNodes().forEach(add_context);
 
   } else if (event.which==78) { // n
     next_batch_of_nodes_please();
-    // turnover_nodes(force=true);
+
   } else if (event.which==80) { // p
     toggle_playpause();
 
@@ -886,7 +908,7 @@ function set_intervals() {
   INTERVALS.push(
     setInterval(
       bg_req_updates, 
-      60 * 1000
+      TIME_BG_UPDATE * 1000
     )
   );
   

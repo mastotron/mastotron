@@ -25,6 +25,7 @@ def Post(url_or_uri='', **post_d):
 class PostModel(DictModel):
     def __init__(self,*x,**y):
         super().__init__(*x,**y)
+        self.is_tmp=False
         self.boot()
 
     def __eq__(self, post):
@@ -589,6 +590,7 @@ class PostModel(DictModel):
         odx['is_read']=post.is_read
         odx['is_reply']=post.is_reply
         odx['is_boost']=post.is_boost
+        odx['is_tmp'] = post.is_tmp
         return odx
 
 
