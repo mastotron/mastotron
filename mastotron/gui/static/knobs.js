@@ -1,5 +1,5 @@
 var ALREADY_UPDATED=false;
-const ABS_MAX_NUM_NODES_IN_QUEUE = 200;
+const ABS_MAX_NUM_NODES_IN_QUEUE = 100;
 var darkbgcolor = '#060718'; //'rgb(20,20,23)'; //#28282B';
 var lightbgcolor = '#F5F5ED';
 var lighttweetbg = 'white';

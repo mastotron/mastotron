@@ -627,7 +627,7 @@ function request_updates(lim=1, force_push=false) {
 
 function turnover_nodes(force=false) {
   if(PAUSE & !force){return;}
-  // sort_stack();
+  sort_stack();
   res = DATA_STACK.pop();
   if(res) {
     update_nodes(res);
@@ -636,8 +636,8 @@ function turnover_nodes(force=false) {
 }
 
 function turnover_nodes_rev() {
-  // sort_stack();
-  res = DATA_STACK.pop();
+  sort_stack();
+  res = DATA_STACK.shift();
   if(res) {
     update_nodes(res);
     lim_nodes();
@@ -794,7 +794,7 @@ $(document).on('keydown', function (event) {
     network.getSelectedNodes().forEach(del_node);
 
   } else if (event.which==76) {  // l
-    sort_stack();
+    // sort_stack();
     turnover_nodes(force=true);
     
   } else if (event.which==77) { // m
@@ -813,6 +813,8 @@ $(document).on('keydown', function (event) {
       add_context(node_id);
     }
   }
+
+  return false; // This stops the beep
   
 });
 
