@@ -628,7 +628,7 @@ function request_updates(lim=1, force_push=false) {
 function turnover_nodes(force=false) {
   if(PAUSE & !force){return;}
   sort_stack();
-  res = DATA_STACK.pop();
+  res = DATA_STACK.shift();
   if(res) {
     update_nodes(res);
     lim_nodes();
@@ -637,7 +637,7 @@ function turnover_nodes(force=false) {
 
 function turnover_nodes_rev() {
   sort_stack();
-  res = DATA_STACK.shift();
+  res = DATA_STACK.pop();
   if(res) {
     update_nodes(res);
     lim_nodes();
