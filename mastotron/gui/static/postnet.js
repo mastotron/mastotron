@@ -627,8 +627,8 @@ function request_updates(lim=1, force_push=false) {
 
 function turnover_nodes(force=false) {
   if(PAUSE & !force){return;}
-  sort_stack();
-  res = DATA_STACK.shift();
+  // sort_stack();
+  res = DATA_STACK.pop();
   if(res) {
     update_nodes(res);
     lim_nodes();
@@ -636,8 +636,8 @@ function turnover_nodes(force=false) {
 }
 
 function turnover_nodes_rev() {
-  sort_stack();
-  res = DATA_STACK.pop();
+  // sort_stack();
+  res = DATA_STACK.shift();
   if(res) {
     update_nodes(res);
     lim_nodes();
@@ -747,11 +747,17 @@ socket.on('get_updates', function(data) {
 function add_to_stack(data) {
   while(DATA_STACK.length > (ABS_MAX_NUM_NODES_IN_QUEUE-1)) { DATA_STACK.shift(); }
   DATA_STACK.push(data);
+  sort_stack();
 }
 
 function sort_stack() {
   // console.log(DATA_STACK);
   DATA_STACK = DATA_STACK.sort((a,b) => a.nodes[0].timestamp - b.nodes[0].timestamp);
+}
+
+function get_latest_post_in_stack() {
+  sort_stack();
+  turnover_nodes(force=true);
 }
 
 function get_more_nodes() {
@@ -794,8 +800,7 @@ $(document).on('keydown', function (event) {
     network.getSelectedNodes().forEach(del_node);
 
   } else if (event.which==76) {  // l
-    // sort_stack();
-    turnover_nodes(force=true);
+    get_latest_post_in_stack()
     
   } else if (event.which==77) { // m
     network.getSelectedNodes().forEach(add_context);
@@ -827,9 +832,11 @@ function get_edge_ids() {
 }
 
 function repos_nodes(overwrite_x=false, overwrite_y=false) {
-  var times = get_all('timestamp');
+  // var times = get_all('timestamp');
+  // var scores = get_all('score');
+  var times = get_all_plus_stack('timestamp');
+  var scores = get_all_plus_stack('score');
   var times_inv = []; times.forEach(function(x){times_inv.push(-1*x);});
-  var scores = get_all('score');
   var scoresX = []; scores.forEach(function(x){scoresX.push(Math.random());});
   var canvas = document.getElementById('postnetviz');
   var width = canvas.scrollWidth;
