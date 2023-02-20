@@ -1,3 +1,4 @@
+const TIME_BG_UPDATE=30
 var ALREADY_UPDATED=false;
 const ABS_MAX_NUM_NODES_IN_QUEUE = 100;
 var darkbgcolor = '#060718'; //'rgb(20,20,23)'; //#28282B';

@@ -38,72 +38,74 @@
       </div>
     </div> -->
 
+    <div id="bodycontainer">
+      
+      <div id="logmsg"></div>
 
-    
-    <div id="logmsg"></div>
+      <div id="optbuttons">
+        <li><a href="#" onclick="gethelpmsg()" title="More information">ℹ</a></li>
 
-    <div id="optbuttons">
-      <li><a href="#" onclick="gethelpmsg()" title="More information">ℹ</a></li>
+        <li><a onclick="toggle_darkmode()" href="#" title="Toggle darkmode">
+          <!-- <img id="nightmode" src="/static/dark-mode-6682.png" width="15" height="15" style="opacity:0.5; margin-bottom:2px;"; /> -->
+          ☾
+        </a></li>
+              
+        <li><a href="#" onclick="prompt_for_num_nodes()" title="Set number of posts shown">#</a></li>
 
-      <li><a onclick="toggle_darkmode()" href="#" title="Toggle darkmode">
-        <!-- <img id="nightmode" src="/static/dark-mode-6682.png" width="15" height="15" style="opacity:0.5; margin-bottom:2px;"; /> -->
-        ☾
-      </a></li>
-            
-      <li><a href="#" onclick="prompt_for_num_nodes()" title="Set number of posts shown">#</a></li>
+        <li><a id="playpause" href="#" onclick="toggle_playpause()" title="">▶</a></li>
 
-      <li><a id="playpause" href="#" onclick="toggle_playpause()" title="">▶</a></li>
+        
+        <li><a id="adjspeed" href="#" onclick="prompt_for_speed()" title="Adjust speed">⟤</a></li>
+        
+      </div>
+
+      <div id='spinner' hidden></div>
+      {% block content %}
+      {% endblock %}
+      
+
+      {% block foot %}
+      {% endblock %}
 
       
-      <li><a id="adjspeed" href="#" onclick="prompt_for_speed()" title="Adjust speed">⟤</a></li>
-      
+  <a href="https://github.com/quadrismegistus/mastotron" target="_blank">
+        <img id="oulo" title="mastotron {{config_d['VNUM']}}" src="/static/dalle3-transp-small.png"></img>
+      </a>
+
+      <div id="helper">
+        Hover to read.<br/>
+        (D) to dismiss.<br/>
+        (C) for context.<br/>
+        (R) to refresh.<br/>
+        (P) to pause.<br/>
+        (N) for next.<br/>
+        (L) for latest.<br/>
+      </div>
     </div>
 
-    <div id='spinner' hidden></div>
-    {% block content %}
-    {% endblock %}
-    
+      <div id="xaxis" class="axis">X-axis: Engagement ⟶</div>
+      <div id="yaxis" class="axis">Y-axis: Recency ⟶</div>
 
-    {% block foot %}
-    {% endblock %}
 
-    
-<a href="https://github.com/quadrismegistus/mastotron" target="_blank">
-      <img id="oulo" title="mastotron {{config_d['VNUM']}}" src="/static/dalle3-transp-small.png"></img>
-    </a>
 
-    <div id="helper">
-      Hover to read.<br/>
-      (D) to dismiss.<br/>
-      (C) for context.<br/>
-      (R) to refresh.<br/>
-      (P) to pause.<br/>
-      (N) for next.<br/>
-      (L) for latest.<br/>
+
+
+
+
+
+
+
+      <script type='module'>
+        import { Lines } from '/static/spinners.mjs'
+        const lines = new Lines({
+          target: document.getElementById('spinner'),
+          props: {
+            size: '10em',
+            colour: 'SlateGrey'
+          }
+        })
+      </script>
+
     </div>
-  </div>
-
-    <div id="xaxis" class="axis">X-axis: Engagement ⟶</div>
-    <div id="yaxis" class="axis">Y-axis: Recency ⟶</div>
-
-
-
-
-
-
-
-
-
-
-    <script type='module'>
-      import { Lines } from '/static/spinners.mjs'
-      const lines = new Lines({
-        target: document.getElementById('spinner'),
-        props: {
-          size: '10em',
-          colour: 'SlateGrey'
-        }
-      })
-    </script>
   </body>
 </html>

@@ -1,8 +1,10 @@
+#bodycontainer { position: relative; }
+
 body {
-font: 11pt arial;
+font: 12pt arial;
 color: black;
-width:100vw;
-height:100vh;
+width:110vw;
+height:120vh;
 /* background-color: white;  */
 background-color: #060718;
 /* background-image: url('/static/dalle2.png'); */

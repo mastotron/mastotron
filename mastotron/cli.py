@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-from .imports import *
-from .gui.app import *
+from mastotron.imports import *
+from mastotron.gui.app import *
 
 
 @click.command()

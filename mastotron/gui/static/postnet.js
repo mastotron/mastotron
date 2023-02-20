@@ -1,6 +1,6 @@
 // vars
 
-const TIME_BG_UPDATE=60
+var TURNED_OVER_NODE=null;
 var BUSY=false;
 var FIXED = {x:false,y:false}
 var MODE = 'default';
@@ -57,7 +57,9 @@ var options = {
       // hover: "#777777"
     },
     font: { 
-      color: txtcolor
+      color: txtcolor,
+      size: 16, // px
+      face: 'arial',
     },
   },
 
@@ -138,7 +140,7 @@ var network = new vis.Network(container, data, options);
 function startnet() {
   console.log('starting network!');
   socket.emit('start_updates', {acct:ACCT});
-  request_updates(lim=get_lim_nodes_graph());
+  request_updates(lim=get_lim_nodes_graph() * 2);
 }
 
 function iter_edges() { return Object.values(network.body.edges); }
@@ -191,17 +193,14 @@ function show_status_div(node_d) {
   $('#tweet').html(node_d['html']);  
   x = node_pos_web['x'];
   y = node_pos_web['y'];
-  $('#tweet').offset(
-    { 
-      top: y, 
-      left: x + 90
-      // top:_offset,
-      // right:0
-    });
+  if(node_pos.x<0) { left_offset = 90; } else { left_offset = 90; }
+  if(node_pos.y<0) { top_offset = 0; } else { top_offset = 0; }
+  $('#tweet').offset( { top: y + top_offset, left: x + left_offset } );
   $('#tweet').show();
+  // document.getElementById('bodycontainer').scrollTop = document.getElementById('tweet').offsetTop + 1000; // @TODO ?
 }
 
-function hide_status_div() { $('#tweet').fadeOut(500); }
+function hide_status_div() { TURNED_OVER_NODE=null; $('#tweet').fadeOut(500); }
 
 
 function getdownstreamnodes(node_id, recurse=2) {
@@ -232,7 +231,7 @@ function del_node(node_id, recursive = true) {
 
   del_nodes(node_ids_to_del);
   // style_nodes();
-  get_more_nodes();
+  get_more_nodes(make_active=true);
   // request_updates();
   // logmsg('marked '+node_id+' as read');
 }
@@ -311,8 +310,10 @@ function update_nodes(data, make_active=false) {
   style_nodes();
   style_edges();
   if(make_active & data.nodes.length){
-    for (let step = 1; step < 100; step++) {
-      setTimeout(function(){ show_status_div(data.nodes[0]); }, step * 10);
+    nd=data.nodes[0];
+    TURNED_OVER_NODE = nd.id;
+    for (let step = 5; step < 10; step++) {
+      setTimeout(function(){ show_status_div(nd); }, step * 100);
     }
   }
 }
@@ -533,6 +534,7 @@ function size_nodes_score(max_size=40, min_size=20, score_type=SCORE_TYPE) {
 let OK_TO_DEL_ON_BLUR = false;
 
 network.on("hoverNode", function (params) {
+  TURNED_OVER_NODE=null;
   node_d = get_node(params);
   network.selectNodes([node_d.id]); 
   show_status_div(node_d);
@@ -782,7 +784,7 @@ function pop_latest_from_stack() {
   return DATA_STACK.pop();
 }
 
-function get_more_nodes() {
+function get_more_nodes(make_active=false) {
   newdata={nodes:[], edges:[]};
   var i=0;
   while ((DATA_STACK.length > 0) && ((nodes.length+newdata.nodes.length) < get_lim_nodes_graph())) {
@@ -793,7 +795,7 @@ function get_more_nodes() {
   }
   // pause=PAUSE;
   // set_playpause(true);
-  if(i>0) { update_nodes(newdata); }
+  if(i>0) { update_nodes(newdata, make_active=make_active); }
   // set_playpause(pause);
 }
 
@@ -819,7 +821,7 @@ $(document).on('keydown', function (event) {
     request_updates(lim=5, force_push=true);
   
   } else if (event.which==68) {  // d
-    network.getSelectedNodes().forEach(del_node);
+    mark_selected_as_read()
 
   } else if (event.which==76) {  // l
     move_latest_post_in_stack_to_network()
@@ -845,6 +847,10 @@ $(document).on('keydown', function (event) {
   
 });
 
+function mark_selected_as_read() {
+  network.getSelectedNodes().forEach(del_node);
+  if (TURNED_OVER_NODE!=null) { del_node(TURNED_OVER_NODE) }
+}
 
 
 function get_edge_ids() { 
@@ -854,10 +860,10 @@ function get_edge_ids() {
 }
 
 function repos_nodes(overwrite_x=false, overwrite_y=false) {
-  // var times = get_all('timestamp');
-  // var scores = get_all('score');
-  var times = get_all_plus_stack('timestamp');
-  var scores = get_all_plus_stack('score');
+  var times = get_all('timestamp');
+  var scores = get_all('score');
+  // var times = get_all_plus_stack('timestamp');
+  // var scores = get_all_plus_stack('score');
   var times_inv = []; times.forEach(function(x){times_inv.push(-1*x);});
   var scoresX = []; scores.forEach(function(x){scoresX.push(Math.random());});
   var canvas = document.getElementById('postnetviz');
